@@ -33,7 +33,7 @@ Purpose: CV project for a mid-level Java backend role. Focus on Java: a testable
 Layered, package-by-feature. Each layer only calls the layer below it.
 - `api`: controllers + request/response DTO records (`api/dto`), `@RestControllerAdvice` error handler
 - `sync`: ingestion, scheduler, job status
-- `client`: `NbaDataClient` interface + balldontlie adapter
+- `client`: `NbaDataClient` interface + ESPN adapter
 - `trend`: `TrendCalculator`, scoring strategies
 - `recommend`: recommendation and keep/watch/drop rules
 - `roster`: `RosterService`, `RosterExtractor`, `PlayerMatcher`
@@ -43,8 +43,10 @@ Layered, package-by-feature. Each layer only calls the layer below it.
 Controllers never touch repositories. APIs return DTO records, never JPA entities.
 
 ## Data model
-- `players`: id, name, team, position, status
-- `game_logs`: id, player_id (FK), game_date, minutes, pts, reb, ast, stl, blk, fga, usage_rate; UNIQUE (player_id, game_date)
+- Target league: Yahoo H2H 9-cat (FG%, FT%, 3PTM, PTS, REB, AST, ST, BLK, TO)
+- `players`: id (ESPN athlete id), name, team, position, status (injury)
+- `game_logs`: id, player_id (FK), game_date, minutes, fgm, fga, fg3m, ftm, fta, reb, ast, stl, blk, tov, pts; UNIQUE (player_id, game_date)
+- Only raw counting stats are stored; FG%/FT% (volume-weighted) and per-minute rates are computed in Java
 - No cache table: computed trends are cached in memory (Spring Cache + Caffeine)
 - SQL is kept minimal: Flyway schema, simple JPA derived queries (e.g. `findByPlayerIdOrderByGameDateAsc`), one upsert
 
@@ -52,7 +54,7 @@ Controllers never touch repositories. APIs return DTO records, never JPA entitie
 - Domain types: `GameLog`/`StatLine` records, `StatCategory` enum
 - `TrendCalculator` (Streams): 3-game rolling average, season baseline from games BEFORE the window (so the delta isn't diluted), delta per category
 - Detects both directions: breakout (positive deltas) and decline (negative deltas)
-- Scoring via Strategy pattern: `ScoringStrategy` interface; `HotStreakScoring` (weighted minutes + FGA + usage rate), `CategoryScoring`; weights from `@ConfigurationProperties`
+- Scoring via Strategy pattern: `ScoringStrategy` interface; `HotStreakScoring` (weighted minutes + FGA + opportunity = (FGA + FTA + TOV) per minute, a usage-rate stand-in), `CategoryScoring`; weights from `@ConfigurationProperties`
 - Noise filter: minimum games and minutes before a player can be "hot"
 - Recommendations: `Recommendation` sealed interface with `Keep` / `Watch` / `Drop(replacement)` records; pattern-matching `switch`
 - Keep/drop rules as an ordered list of `RosterRule` (Chain of Responsibility)
@@ -60,7 +62,11 @@ Controllers never touch repositories. APIs return DTO records, never JPA entitie
 - Trend computation for all players runs in parallel on the thread pool (CPU work)
 
 ## Ingestion
-- Source: balldontlie API (check free-tier limits and which stats exist, e.g. `usage_rate` may need computing)
+- Source: ESPN's unofficial API (free, no key). balldontlie stats are paid; stats.nba.com blocks non-browser clients.
+  - Player game log: `https://site.web.api.espn.com/apis/common/v3/sports/basketball/nba/athletes/{id}/gamelog?season=2026` (season = end year)
+  - `stats` is a string array ordered like `labels`: MIN, FG, FG%, 3PT, 3P%, FT, FT%, REB, AST, BLK, STL, PF, TO, PTS
+  - Made-attempted values are strings like `"8-18"`; game date is in `events[eventId].gameDate` (UTC, convert to US date); keep regular season only
+  - Player list: ESPN team roster endpoints (not verified yet)
 - API client behind an interface so the source can be swapped (or a CSV dataset loaded)
 - Idempotent inserts: `INSERT ... ON CONFLICT DO NOTHING`
 - Concurrency (added after single-threaded version works): `@Async` + `CompletableFuture` on a custom `ThreadPoolTaskExecutor`, Resilience4j rate limiter, MDC propagated with a `TaskDecorator`
@@ -93,7 +99,7 @@ Layered architecture, Repository, DTO, Strategy (scoring, extractor), Adapter (A
 ## Build order (update status as you go)
 1. Skeleton: project, docker-compose, config, README stub: DONE
 2. Schema: Flyway `V1__init.sql` (players, game_logs); app starts and Flyway applies V1: DONE
-3. Call the data API once and inspect the real JSON; adjust schema
+3. Call the data API once and inspect the real JSON; adjust schema: DONE (switched to ESPN, V1 reworked for Yahoo 9-cat)
 4. Domain records + `TrendCalculator` + scoring strategies, test-first, with unit tests (can start with fake games)
 5. Single-threaded ingestion
 6. Recommendation endpoints + Caffeine cache + Swagger
