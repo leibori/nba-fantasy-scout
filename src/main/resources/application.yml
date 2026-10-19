@@ -1,0 +1,11 @@
+spring:
+  application:
+    name: nba-fantasy-scout
+  datasource:
+    url: jdbc:postgresql://localhost:5432/scout
+    username: scout
+    password: scout
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    open-in-view: false

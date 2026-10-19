@@ -1,0 +1,112 @@
+# nba-fantasy-scout
+
+Spring Boot backend for NBA fantasy basketball. It detects breakout and declining players from recent form (3-game rolling average vs. season baseline), and advises who to keep, watch or drop in the user's squad, including from roster screenshots.
+
+Purpose: CV project for a mid-level Java backend role. Focus on Java: a testable domain layer, design patterns, concurrency, tests. The database stays simple (storage + simple queries); all analytics run in Java. The UI stays minimal.
+
+## How to work with me
+- Work in small steps, one build-order step at a time. Do not jump ahead.
+- Before writing code for a step, say in 2-3 lines what you are about to create and why.
+- I am a Java developer; keep explanations short, but explain non-obvious SQL and any new library the first time it appears.
+- Do not add features, dependencies or files that are not in this document without asking.
+- Write tests only where there is real logic (JUnit 5, Mockito, Testcontainers); setup steps like skeleton and schema need none.
+- Never commit secrets. API keys come from environment variables (e.g. `${BALLDONTLIE_API_KEY}`), never hard-coded.
+- After finishing a step, update the "Build order" status below.
+
+## Stack
+- Java 21, Spring Boot 4.x, Gradle (Kotlin DSL)
+- Spring Web, Spring Data JPA, Validation
+- PostgreSQL 16 (Docker Compose), Flyway migrations (`ddl-auto: validate`; Flyway owns the schema)
+- Resilience4j (rate limiting, retry with exponential backoff)
+- Tests: JUnit 5, Mockito, Testcontainers
+- Logging: SLF4J/Logback with MDC correlation IDs
+- Package: `com.ori_leibo.nbafantasyscout`
+
+## Local setup
+- `docker-compose.yml` in the project root runs `postgres:16`: db `scout`, user `scout`, password `scout`, port 5432 (dev only)
+- Start DB: `docker compose up -d`; reset: `docker compose down -v`
+- `src/main/resources/application.yml`: datasource `jdbc:postgresql://localhost:5432/scout`, `ddl-auto: validate`
+- Run: `./gradlew bootRun`; tests: `./gradlew test`
+- Spring Initializr generated test helpers (`TestcontainersConfiguration`, `Test...Application`); keep them for the Testcontainers step
+
+## Architecture
+Layered, package-by-feature. Each layer only calls the layer below it.
+- `api`: controllers + request/response DTO records (`api/dto`), `@RestControllerAdvice` error handler
+- `sync`: ingestion, scheduler, job status
+- `client`: `NbaDataClient` interface + balldontlie adapter
+- `trend`: `TrendCalculator`, scoring strategies
+- `recommend`: recommendation and keep/watch/drop rules
+- `roster`: `RosterService`, `RosterExtractor`, `PlayerMatcher`
+- `domain`: entities and records (`Player`, `GameLog`, `StatCategory`)
+- `config`: thread pool, Resilience4j, MDC, `@ConfigurationProperties`
+
+Controllers never touch repositories. APIs return DTO records, never JPA entities.
+
+## Data model
+- `players`: id, name, team, position, status
+- `game_logs`: id, player_id (FK), game_date, minutes, pts, reb, ast, stl, blk, fga, usage_rate; UNIQUE (player_id, game_date)
+- No cache table: computed trends are cached in memory (Spring Cache + Caffeine)
+- SQL is kept minimal: Flyway schema, simple JPA derived queries (e.g. `findByPlayerIdOrderByGameDateAsc`), one upsert
+
+## Core logic (pure Java, no Spring/DB in the domain classes)
+- Domain types: `GameLog`/`StatLine` records, `StatCategory` enum
+- `TrendCalculator` (Streams): 3-game rolling average, season baseline from games BEFORE the window (so the delta isn't diluted), delta per category
+- Detects both directions: breakout (positive deltas) and decline (negative deltas)
+- Scoring via Strategy pattern: `ScoringStrategy` interface; `HotStreakScoring` (weighted minutes + FGA + usage rate), `CategoryScoring`; weights from `@ConfigurationProperties`
+- Noise filter: minimum games and minutes before a player can be "hot"
+- Recommendations: `Recommendation` sealed interface with `Keep` / `Watch` / `Drop(replacement)` records; pattern-matching `switch`
+- Keep/drop rules as an ordered list of `RosterRule` (Chain of Responsibility)
+- `SyncService` publishes `SyncCompletedEvent` (Observer); a listener recomputes trends and evicts the cache
+- Trend computation for all players runs in parallel on the thread pool (CPU work)
+
+## Ingestion
+- Source: balldontlie API (check free-tier limits and which stats exist, e.g. `usage_rate` may need computing)
+- API client behind an interface so the source can be swapped (or a CSV dataset loaded)
+- Idempotent inserts: `INSERT ... ON CONFLICT DO NOTHING`
+- Concurrency (added after single-threaded version works): `@Async` + `CompletableFuture` on a custom `ThreadPoolTaskExecutor`, Resilience4j rate limiter, MDC propagated with a `TaskDecorator`
+- Measure sync time before/after concurrency (the number goes on the CV)
+
+## Endpoints
+- `POST /api/v1/sync/daily`: returns 202 + job id; also `GET /api/v1/sync/jobs/{jobId}` and a `@Scheduled` trigger
+- `GET /api/v1/recommendations/hot?limit=10`: top by hot score
+- `GET /api/v1/recommendations/{category}`
+- `GET /api/v1/players/{id}/trend`
+- `POST /api/v1/roster`: list of player names, returns keep / watch / drop + best replacement
+- `POST /api/v1/roster/from-image`: `MultipartFile[]` screenshots, extracts names, returns detected players with confidence for user review, then recommendations
+
+## Roster from screenshots
+- `RosterExtractor` interface: vision-model API implementation (primary), Tesseract/Tess4J (free fallback)
+- `PlayerMatcher` in Java: normalization (case, accents via `java.text.Normalizer`, "J. Smith") + own Levenshtein implementation; low confidence = flagged "unsure"
+- User can correct names before recommendations
+- Multiple screenshots: merge and dedupe
+- Images processed in memory, never stored
+- Decision rule: keep = high hot score; drop = low score and a free agent clearly higher; otherwise watch; thresholds in config
+
+## UI
+- Swagger UI (springdoc), added with the first controller
+- One static HTML page in `src/main/resources/static/` with vanilla JS: hot list table, category dropdown, screenshot upload, editable detected names, results table
+- Optional: daily top-10 push to Telegram/email
+
+## Design patterns used
+Layered architecture, Repository, DTO, Strategy (scoring, extractor), Adapter (API client), Chain of Responsibility (roster rules), Observer (sync events), Cache-aside (Caffeine), Dependency Injection, Retry/Rate limiter (Resilience4j).
+
+## Build order (update status as you go)
+1. Skeleton: project, docker-compose, config, README stub: DONE
+2. Schema: Flyway `V1__init.sql` (players, game_logs); app starts and Flyway applies V1: DONE
+3. Call the data API once and inspect the real JSON; adjust schema
+4. Domain records + `TrendCalculator` + scoring strategies, test-first, with unit tests (can start with fake games)
+5. Single-threaded ingestion
+6. Recommendation endpoints + Caffeine cache + Swagger
+7. Tests: unit tests for domain logic, Testcontainers for repositories/ingestion, Mockito for services, `@WebMvcTest` for controllers
+8. Concurrency + Resilience4j + MDC + `SyncCompletedEvent`; optional comparison of platform threads vs virtual threads for fetching
+9. Roster endpoint (typed names), then screenshot input
+10. Polish: 202 sync, scheduler, static page, README with demo GIF
+11. CI: GitHub Actions running tests
+
+## Current task
+Finish step 2: make sure `application.yml` matches docker-compose, create `src/main/resources/db/migration/V1__init.sql` with the two tables, run the app and confirm Flyway applied V1 with no errors. Then commit. Do not start step 3 until I confirm.
+
+## Conventions
+- Small commits, push often
+- Tests for logic, not for setup steps
+- Config values (weights, thresholds, pool size) in `application.yml`, not hard-coded
