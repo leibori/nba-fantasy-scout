@@ -9,3 +9,11 @@ spring:
     hibernate:
       ddl-auto: validate
     open-in-view: false
+
+logging:
+  file:
+    name: logs/scout.log
+  logback:
+    rollingpolicy:
+      max-history: 2         # days of rotated files to keep
+      total-size-cap: 50MB   # hard cap on the whole logs folder

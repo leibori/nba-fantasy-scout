@@ -10,6 +10,8 @@ Purpose: CV project for a mid-level Java backend role. Focus on Java: a testable
 - I am a Java developer; keep explanations short, but explain non-obvious SQL and any new library the first time it appears.
 - Do not add features, dependencies or files that are not in this document without asking.
 - Write tests only where there is real logic (JUnit 5, Mockito, Testcontainers); setup steps like skeleton and schema need none.
+- Keep tests lean: one JUnit 5 test class per logic class, covering the main cases and the edge cases that actually break; no near-duplicate tests.
+- Log important actions (INFO), skipped/odd data (WARN) and failures with stack trace (ERROR) via SLF4J (`LoggerFactory.getLogger(X.class)`), no custom log wrapper. Logs go to `logs/scout.log`, rotated daily, kept 2 days (config in `application.yml`).
 - Never commit secrets. API keys come from environment variables (e.g. `${BALLDONTLIE_API_KEY}`), never hard-coded.
 - After finishing a step, update the "Build order" status below.
 
