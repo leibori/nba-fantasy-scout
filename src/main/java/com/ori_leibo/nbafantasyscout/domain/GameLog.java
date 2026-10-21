@@ -6,8 +6,8 @@ import java.time.LocalDate;
 public record GameLog(
         LocalDate gameDate,
         int minutes,
-        int fgm, int fga,
-        int fg3m,
-        int ftm, int fta,
-        int reb, int ast, int stl, int blk, int tov, int pts) {
+        int fieldGoalsMade, int fieldGoalsAttempted,
+        int threesMade,
+        int freeThrowsMade, int freeThrowsAttempted,
+        int rebounds, int assists, int steals, int blocks, int turnovers, int points) {
 }

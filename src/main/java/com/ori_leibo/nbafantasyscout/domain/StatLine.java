@@ -6,10 +6,10 @@ import java.util.function.ToIntFunction;
 /** Per-game averages over a set of games. */
 public record StatLine(
         double minutes,
-        double fgm, double fga,
-        double fg3m,
-        double ftm, double fta,
-        double reb, double ast, double stl, double blk, double tov, double pts) {
+        double fieldGoalsMade, double fieldGoalsAttempted,
+        double threesMade,
+        double freeThrowsMade, double freeThrowsAttempted,
+        double rebounds, double assists, double steals, double blocks, double turnovers, double points) {
 
     public static StatLine average(List<GameLog> games) {
         if (games.isEmpty()) {
@@ -17,20 +17,20 @@ public record StatLine(
         }
         return new StatLine(
                 avg(games, GameLog::minutes),
-                avg(games, GameLog::fgm), avg(games, GameLog::fga),
-                avg(games, GameLog::fg3m),
-                avg(games, GameLog::ftm), avg(games, GameLog::fta),
-                avg(games, GameLog::reb), avg(games, GameLog::ast), avg(games, GameLog::stl),
-                avg(games, GameLog::blk), avg(games, GameLog::tov), avg(games, GameLog::pts));
+                avg(games, GameLog::fieldGoalsMade), avg(games, GameLog::fieldGoalsAttempted),
+                avg(games, GameLog::threesMade),
+                avg(games, GameLog::freeThrowsMade), avg(games, GameLog::freeThrowsAttempted),
+                avg(games, GameLog::rebounds), avg(games, GameLog::assists), avg(games, GameLog::steals),
+                avg(games, GameLog::blocks), avg(games, GameLog::turnovers), avg(games, GameLog::points));
     }
 
     // Ratio of averages equals total makes / total attempts, so percentages are volume-weighted.
-    public double fgPct() {
-        return fga == 0 ? 0 : fgm / fga;
+    public double fieldGoalPct() {
+        return fieldGoalsAttempted == 0 ? 0 : fieldGoalsMade / fieldGoalsAttempted;
     }
 
-    public double ftPct() {
-        return fta == 0 ? 0 : ftm / fta;
+    public double freeThrowPct() {
+        return freeThrowsAttempted == 0 ? 0 : freeThrowsMade / freeThrowsAttempted;
     }
 
     private static double avg(List<GameLog> games, ToIntFunction<GameLog> stat) {

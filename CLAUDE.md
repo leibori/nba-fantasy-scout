@@ -35,7 +35,7 @@ Purpose: CV project for a mid-level Java backend role. Focus on Java: a testable
 Layered, package-by-feature. Each layer only calls the layer below it.
 - `api`: controllers + request/response DTO records (`api/dto`), `@RestControllerAdvice` error handler
 - `sync`: ingestion, scheduler, job status
-- `client`: `NbaDataClient` interface + ESPN adapter
+- `client`: `NbaDataClient` interface + ESPN adapter; `SleeperClient` (injuries, trending adds/drops); both share `RestClient` + Resilience4j config
 - `trend`: `TrendCalculator`, scoring strategies
 - `recommend`: recommendation and keep/watch/drop rules
 - `roster`: `RosterService`, `RosterExtractor`, `PlayerMatcher`
@@ -46,8 +46,9 @@ Controllers never touch repositories. APIs return DTO records, never JPA entitie
 
 ## Data model
 - Target league: Yahoo H2H 9-cat (FG%, FT%, 3PTM, PTS, REB, AST, ST, BLK, TO)
-- `players`: id (ESPN athlete id), name, team, position, status (injury)
+- `players`: id (ESPN athlete id), name, team, position, status (injury, from Sleeper `injury_status`)
 - `game_logs`: id, player_id (FK), game_date, minutes, fgm, fga, fg3m, ftm, fta, reb, ast, stl, blk, tov, pts; UNIQUE (player_id, game_date)
+- `trending_snapshots` (Flyway V2): player_id (FK), type (ADD/DROP), count, fetched_at; keeps history ("adds rising 3 days")
 - Only raw counting stats are stored; FG%/FT% (volume-weighted) and per-minute rates are computed in Java
 - No cache table: computed trends are cached in memory (Spring Cache + Caffeine)
 - SQL is kept minimal: Flyway schema, simple JPA derived queries (e.g. `findByPlayerIdOrderByGameDateAsc`), one upsert
@@ -57,10 +58,15 @@ Controllers never touch repositories. APIs return DTO records, never JPA entitie
 - `TrendCalculator` (Streams): 3-game rolling average, season baseline from games BEFORE the window (so the delta isn't diluted), delta per category
 - Detects both directions: breakout (positive deltas) and decline (negative deltas)
 - Scoring via Strategy pattern: `ScoringStrategy` interface; `HotStreakScoring` (weighted minutes + FGA + opportunity = (FGA + FTA + TOV) per minute, a usage-rate stand-in), `CategoryScoring`; weights from `@ConfigurationProperties`
-- Noise filter: minimum games and minutes before a player can be "hot"
+- Noise filter: minimum baseline games, and minimum minutes in the recent OR baseline period (so a benched starter still shows as a decline)
 - Recommendations: `Recommendation` sealed interface with `Keep` / `Watch` / `Drop(replacement)` records; pattern-matching `switch`
 - Keep/drop rules as an ordered list of `RosterRule` (Chain of Responsibility)
-- `SyncService` publishes `SyncCompletedEvent` (Observer); a listener recomputes trends and evicts the cache
+- Crowd cross-check: `CrowdSignal` classifies (crowd direction from Sleeper adds/drops, model direction from trend), both ways:
+  - adds + breakout = confirmed breakout; adds + nothing = hype; no adds + breakout = early pickup
+  - drops + decline = confirmed decline; drops + stats fine = panic drop (hold / buy low); no drops + decline = early warning
+  - Crowd data is evidence shown to the user, never part of the score
+- Injury and crowd rules in the `RosterRule` chain: never suggest an `Out`/`IR` free agent as replacement; a heavily dropped player on the user's roster is judged by injury status first (injured = by injury length, healthy + decline = drop, healthy + fine = keep)
+- `SyncService` publishes `SyncCompletedEvent` (Observer); a listener recomputes trends, cross-checks them with the latest trending snapshot, and evicts the cache
 - Trend computation for all players runs in parallel on the thread pool (CPU work)
 
 ## Ingestion
@@ -69,6 +75,11 @@ Controllers never touch repositories. APIs return DTO records, never JPA entitie
   - `stats` is a string array ordered like `labels`: MIN, FG, FG%, 3PT, 3P%, FT, FT%, REB, AST, BLK, STL, PF, TO, PTS
   - Made-attempted values are strings like `"8-18"`; game date is in `events[eventId].gameDate` (UTC, convert to US date); keep regular season only
   - Player list: ESPN team roster endpoints (not verified yet)
+- Secondary source: Sleeper API (free, no key, base `https://api.sleeper.app/v1`)
+  - `GET /players/nba`: all players with `injury_status` (DTD/Out/IR), `injury_body_part`; ~2.5 MB, fetch at most once a day
+  - `GET /players/nba/trending/{add|drop}?lookback_hours=24&limit=25`: `[{player_id, count}]`
+  - No ESPN ids in Sleeper data: map players by name via `PlayerMatcher`
+  - Runs on a schedule inside the daily sync (injuries + add/drop snapshots), not on user request; optional second injury-only run before games
 - API client behind an interface so the source can be swapped (or a CSV dataset loaded)
 - Idempotent inserts: `INSERT ... ON CONFLICT DO NOTHING`
 - Concurrency (added after single-threaded version works): `@Async` + `CompletableFuture` on a custom `ThreadPoolTaskExecutor`, Resilience4j rate limiter, MDC propagated with a `TaskDecorator`
@@ -102,9 +113,9 @@ Layered architecture, Repository, DTO, Strategy (scoring, extractor), Adapter (A
 1. Skeleton: project, docker-compose, config, README stub: DONE
 2. Schema: Flyway `V1__init.sql` (players, game_logs); app starts and Flyway applies V1: DONE
 3. Call the data API once and inspect the real JSON; adjust schema: DONE (switched to ESPN, V1 reworked for Yahoo 9-cat)
-4. Domain records + `TrendCalculator` + scoring strategies, test-first, with unit tests (can start with fake games)
-5. Single-threaded ingestion
-6. Recommendation endpoints + Caffeine cache + Swagger
+4. Domain records + `TrendCalculator` + scoring strategies, test-first, with unit tests (can start with fake games): DONE
+5. Single-threaded ingestion (ESPN game logs + Sleeper injuries and trending snapshots, Flyway V2); `PlayerMatcher` built here (needed for Sleeper name mapping), reused in step 9
+6. Recommendation endpoints + Caffeine cache + Swagger; `CrowdSignal` cross-check and crowd evidence in responses
 7. Tests: unit tests for domain logic, Testcontainers for repositories/ingestion, Mockito for services, `@WebMvcTest` for controllers
 8. Concurrency + Resilience4j + MDC + `SyncCompletedEvent`; optional comparison of platform threads vs virtual threads for fetching
 9. Roster endpoint (typed names), then screenshot input

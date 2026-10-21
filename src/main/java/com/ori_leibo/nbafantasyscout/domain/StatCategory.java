@@ -4,15 +4,15 @@ import java.util.function.ToDoubleFunction;
 
 /** Yahoo H2H 9-cat categories. */
 public enum StatCategory {
-    FG_PCT(StatLine::fgPct, false),
-    FT_PCT(StatLine::ftPct, false),
-    THREES(StatLine::fg3m, false),
-    PTS(StatLine::pts, false),
-    REB(StatLine::reb, false),
-    AST(StatLine::ast, false),
-    STL(StatLine::stl, false),
-    BLK(StatLine::blk, false),
-    TO(StatLine::tov, true);
+    FG_PCT(StatLine::fieldGoalPct, false),
+    FT_PCT(StatLine::freeThrowPct, false),
+    THREES(StatLine::threesMade, false),
+    PTS(StatLine::points, false),
+    REB(StatLine::rebounds, false),
+    AST(StatLine::assists, false),
+    STL(StatLine::steals, false),
+    BLK(StatLine::blocks, false),
+    TO(StatLine::turnovers, true);
 
     private final ToDoubleFunction<StatLine> extractor;
     private final boolean lowerIsBetter;
