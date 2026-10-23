@@ -38,3 +38,8 @@ out/
 
 ### Logs ###
 logs/
+
+### Local tools ###
+.claude/
+.postman/
+postman/
