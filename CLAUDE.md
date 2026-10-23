@@ -35,7 +35,7 @@ Purpose: CV project for a mid-level Java backend role. Focus on Java: a testable
 Layered, package-by-feature. Each layer only calls the layer below it.
 - `api`: controllers + request/response DTO records (`api/dto`), `@RestControllerAdvice` error handler
 - `sync`: ingestion, scheduler, job status
-- `client`: `NbaDataClient` interface + ESPN adapter; `SleeperClient` (injuries, trending adds/drops); both share a JDK `java.net.http.HttpClient` + Resilience4j config (plain Java; Spring only wires them)
+- `client`: `NbaDataClient` interface + ESPN adapter; `SleeperClient` (trending adds/drops); both share a JDK `java.net.http.HttpClient` + Resilience4j config (plain Java; Spring only wires them)
 - `trend`: `TrendCalculator`, scoring strategies
 - `recommend`: recommendation and keep/watch/drop rules
 - `roster`: `RosterService`, `RosterExtractor`, `PlayerMatcher`
@@ -46,7 +46,7 @@ Controllers never touch repositories. APIs return DTO records, never JPA entitie
 
 ## Data model
 - Target league: Yahoo H2H 9-cat (FG%, FT%, 3PTM, PTS, REB, AST, ST, BLK, TO)
-- `players`: id (ESPN athlete id), name, team, position, status (injury, from Sleeper `injury_status`)
+- `players`: id (ESPN athlete id), name, team, position, status (injury, from ESPN roster `injuries[0].status`, e.g. `Out`, `Day-To-Day`; null = healthy)
 - `game_logs`: id, player_id (FK), game_date, minutes, fgm, fga, fg3m, ftm, fta, reb, ast, stl, blk, tov, pts; UNIQUE (player_id, game_date)
 - `trending_snapshots` (Flyway V2): player_id (FK), type (ADD/DROP), count, fetched_at; keeps history ("adds rising 3 days")
 - Only raw counting stats are stored; FG%/FT% (volume-weighted) and per-minute rates are computed in Java
@@ -74,12 +74,13 @@ Controllers never touch repositories. APIs return DTO records, never JPA entitie
   - Player game log: `https://site.web.api.espn.com/apis/common/v3/sports/basketball/nba/athletes/{id}/gamelog?season=2026` (season = end year)
   - `stats` is a string array ordered like `labels`: MIN, FG, FG%, 3PT, 3P%, FT, FT%, REB, AST, BLK, STL, PF, TO, PTS
   - Made-attempted values are strings like `"8-18"`; game date is in `events[eventId].gameDate` (UTC, convert to US date); keep regular season only
-  - Player list: ESPN team roster endpoints (not verified yet)
-- Secondary source: Sleeper API (free, no key, base `https://api.sleeper.app/v1`)
-  - `GET /players/nba`: all players with `injury_status` (DTD/Out/IR), `injury_body_part`; ~2.5 MB, fetch at most once a day
+  - Player list (verified): `https://site.api.espn.com/apis/site/v2/sports/basketball/nba/teams` (30 teams at `sports[0].leagues[0].teams[].team`, `id` + `abbreviation`), then `.../teams/{id}/roster` (`athletes[]`: `id`, `fullName`, `position.abbreviation`, `injuries[]`); rosters are always the current season
+  - Injury status comes from the roster too (same ESPN id, no name matching)
+- Secondary source: Sleeper API (free, no key, base `https://api.sleeper.app/v1`), used for crowd signals only
   - `GET /players/nba/trending/{add|drop}?lookback_hours=24&limit=25`: `[{player_id, count}]`
+  - `GET /players/nba` (~2.5 MB, at most once a day): needed to turn Sleeper `player_id` into a name; also has `injury_body_part` if injury detail is wanted later
   - No ESPN ids in Sleeper data: map players by name via `PlayerMatcher`
-  - Runs on a schedule inside the daily sync (injuries + add/drop snapshots), not on user request; optional second injury-only run before games
+  - Runs on a schedule inside the daily sync (add/drop snapshots), not on user request
 - API client behind an interface so the source can be swapped (or a CSV dataset loaded)
 - Idempotent inserts: `INSERT ... ON CONFLICT DO NOTHING`
 - Concurrency (added after single-threaded version works): `@Async` + `CompletableFuture` on a custom `ThreadPoolTaskExecutor`, Resilience4j rate limiter, MDC propagated with a `TaskDecorator`
@@ -114,7 +115,7 @@ Layered architecture, Repository, DTO, Strategy (scoring, extractor), Adapter (A
 2. Schema: Flyway `V1__init.sql` (players, game_logs); app starts and Flyway applies V1: DONE
 3. Call the data API once and inspect the real JSON; adjust schema: DONE (switched to ESPN, V1 reworked for Yahoo 9-cat)
 4. Domain records + `TrendCalculator` + scoring strategies, test-first, with unit tests (can start with fake games): DONE
-5. Single-threaded ingestion (ESPN game logs + Sleeper injuries and trending snapshots, Flyway V2); `PlayerMatcher` built here (needed for Sleeper name mapping), reused in step 9
+5. Single-threaded ingestion (ESPN players, injuries and game logs + Sleeper trending snapshots, Flyway V2); `PlayerMatcher` built here (needed for Sleeper name mapping), reused in step 9
 6. Recommendation endpoints + Caffeine cache + Swagger; `CrowdSignal` cross-check and crowd evidence in responses
 7. Tests: unit tests for domain logic, Testcontainers for repositories/ingestion, Mockito for services, `@WebMvcTest` for controllers
 8. Concurrency + Resilience4j + MDC + `SyncCompletedEvent`; optional comparison of platform threads vs virtual threads for fetching

@@ -27,6 +27,7 @@ public class EspnGameLogMapper {
     public List<GameLog> map(String json) {
         JsonNode root = JsonMapper.shared().readTree(json);
         Columns columns = Columns.from(root.path("labels"));
+
         JsonNode events = root.path("events");
 
         List<GameLog> games = new ArrayList<>();

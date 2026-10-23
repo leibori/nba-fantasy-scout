@@ -1,0 +1,43 @@
+{
+  "team": {
+    "id": "13",
+    "abbreviation": "LAL",
+    "displayName": "Los Angeles Lakers"
+  },
+  "athletes": [
+    {
+      "id": "3945274",
+      "fullName": "Luka Doncic",
+      "position": {
+        "abbreviation": "G"
+      },
+      "injuries": []
+    },
+    {
+      "id": "5113969",
+      "fullName": "Cameron Carr",
+      "position": {
+        "abbreviation": "G"
+      },
+      "injuries": [
+        {
+          "status": "Out",
+          "date": "2026-10-23T00:10Z"
+        }
+      ]
+    },
+    {
+      "id": "4592691",
+      "fullName": "Jake LaRavia",
+      "position": {
+        "abbreviation": "F"
+      },
+      "injuries": [
+        {
+          "status": "Day-To-Day",
+          "date": "2026-10-23T00:10Z"
+        }
+      ]
+    }
+  ]
+}
