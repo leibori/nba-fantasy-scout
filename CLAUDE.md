@@ -35,7 +35,7 @@ Purpose: CV project for a mid-level Java backend role. Focus on Java: a testable
 Layered, package-by-feature. Each layer only calls the layer below it.
 - `api`: controllers + request/response DTO records (`api/dto`), `@RestControllerAdvice` error handler
 - `sync`: ingestion, scheduler, job status
-- `client`: `NbaDataClient` interface + ESPN adapter; `SleeperClient` (injuries, trending adds/drops); both share `RestClient` + Resilience4j config
+- `client`: `NbaDataClient` interface + ESPN adapter; `SleeperClient` (injuries, trending adds/drops); both share a JDK `java.net.http.HttpClient` + Resilience4j config (plain Java; Spring only wires them)
 - `trend`: `TrendCalculator`, scoring strategies
 - `recommend`: recommendation and keep/watch/drop rules
 - `roster`: `RosterService`, `RosterExtractor`, `PlayerMatcher`
