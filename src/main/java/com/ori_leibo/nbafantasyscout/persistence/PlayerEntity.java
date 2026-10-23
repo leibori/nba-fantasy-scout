@@ -1,0 +1,39 @@
+package com.ori_leibo.nbafantasyscout.persistence;
+
+import com.ori_leibo.nbafantasyscout.domain.Player;
+import jakarta.persistence.Entity;
+import jakarta.persistence.Id;
+import jakarta.persistence.Table;
+
+/** Row of {@code players}. The id is ESPN's, so saving a known player updates it instead of adding a row. */
+@Entity
+@Table(name = "players")
+public class PlayerEntity {
+
+    @Id
+    private long id;
+    private String name;
+    private String team;
+    private String position;
+    private String status;
+
+    protected PlayerEntity() {
+        // for JPA
+    }
+
+    private PlayerEntity(long id, String name, String team, String position, String status) {
+        this.id = id;
+        this.name = name;
+        this.team = team;
+        this.position = position;
+        this.status = status;
+    }
+
+    public static PlayerEntity from(Player player) {
+        return new PlayerEntity(player.id(), player.name(), player.team(), player.position(), player.status());
+    }
+
+    public Player toPlayer() {
+        return new Player(id, name, team, position, status);
+    }
+}

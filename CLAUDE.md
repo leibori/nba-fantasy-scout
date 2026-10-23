@@ -39,7 +39,8 @@ Layered, package-by-feature. Each layer only calls the layer below it.
 - `trend`: `TrendCalculator`, scoring strategies
 - `recommend`: recommendation and keep/watch/drop rules
 - `roster`: `RosterService`, `RosterExtractor`, `PlayerMatcher`
-- `domain`: entities and records (`Player`, `GameLog`, `StatCategory`)
+- `domain`: pure Java records and enums (`Player`, `GameLog`, `StatLine`, `StatCategory`), no JPA
+- `persistence`: JPA entities (`PlayerEntity`, `GameLogEntity`, converting to/from the domain records), Spring Data repositories, `GameLogUpsert` (`JdbcTemplate` batch with `ON CONFLICT DO NOTHING`)
 - `config`: thread pool, Resilience4j, MDC, `@ConfigurationProperties`
 
 Controllers never touch repositories. APIs return DTO records, never JPA entities.
