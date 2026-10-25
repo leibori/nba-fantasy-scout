@@ -29,6 +29,7 @@ Purpose: CV project for a mid-level Java backend role. Focus on Java: a testable
 - Start DB: `docker compose up -d`; reset: `docker compose down -v`
 - `src/main/resources/application.yml`: datasource `jdbc:postgresql://localhost:5432/scout`, `ddl-auto: validate`
 - Run: `./gradlew bootRun`; tests: `./gradlew test`
+- Demo (manual end-to-end check, real ESPN + dev DB, prints OK/FAIL): `demo/DemoRunner`, only active with the `demo` profile. Needs `docker compose up -d`. Git Bash: `JAVA_TOOL_OPTIONS="-Djavax.net.ssl.trustStoreType=Windows-ROOT" ./gradlew bootRun --args="--spring.profiles.active=demo --spring.main.web-application-type=none"` (the trust store option is only needed on this machine's HTTPS inspection). Keep it updated as features land.
 - Spring Initializr generated test helpers (`TestcontainersConfiguration`, `Test...Application`); keep them for the Testcontainers step
 
 ## Architecture
