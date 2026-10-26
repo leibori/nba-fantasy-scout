@@ -1,47 +1,42 @@
 # Demo runner
 
 `DemoRunner` is a manual end-to-end check against the **real ESPN and Sleeper APIs** and the **dev Postgres**:
-ESPN → database → `TrendCalculator`, plus Sleeper → `PlayerMatcher`. It prints an `[OK]` / `[FAIL]` line per check and ends with
-`DEMO PASSED` or `DEMO FAILED: N check(s)`.
+the wired `SyncService` fills the database, then the data flows into `TrendCalculator`. It prints an
+`[OK]` / `[FAIL]` line per check and ends with `DEMO PASSED` or `DEMO FAILED: N check(s)`.
 
 It runs only with the `demo` profile, so it never runs on a normal start or in the tests.
+A full run takes about 2.5 minutes: the sync fetches every rostered player's season, one call at a time.
 
 ## What it checks
 
-### 1. Players: ESPN rosters → `players` table
+### 1. Daily sync: ESPN players + game logs, Sleeper trending → DB
+Prints the sync summary, e.g. `518 players, 0 game logs new or changed, 0 failed players, 49 snapshots, took 140 s`.
+The time is the single-threaded baseline to compare with the concurrent sync (step 8).
+
 | Check | Proves |
 |---|---|
 | `ESPN returned 30 teams' worth of players (518)` | ESPN roster client and parser work; fails below 400 players |
-| `players table holds them (518)` | `PlayerRepository.saveAll` wrote them to Postgres |
+| `players table holds them (518)` | Players were saved to Postgres |
 | `some players have an injury status` | Injury status parsing works |
+| `no player's game logs failed` | Every player's game log parsed (rookies and players out all season return no games, not an error) |
+| `game_logs holds a season of games (23569)` | Game logs were stored; fails below 10,000 rows |
+| `Sleeper trending stored as snapshots (49, 98 in total)` | Sleeper adds/drops were matched to ESPN players and appended to `trending_snapshots` |
 
-### 2. Game logs: ESPN → `game_logs` table, inserted twice
-For Luka Doncic, Nikola Jokic and Shai Gilgeous-Alexander:
+On an already filled database "game logs new or changed" is 0: the upsert only writes real changes.
+Sleeper names with no sure ESPN match (e.g. a free agent) are logged as WARN and skipped.
 
+### 2. Upsert one player's season again
 | Check | Proves |
 |---|---|
-| `fetched 65 games, 65 stored` | Game log client works and the DB holds exactly what ESPN returned |
-| `second upsert changed nothing (ON CONFLICT)` | Re-running adds no duplicates and rewrites nothing unchanged (`GameLogUpsert`) |
-
-A player who is no longer on a current roster prints `[SKIP]` instead of failing.
+| `Luka Doncic: second upsert changed nothing (ON CONFLICT)` | Re-running adds no duplicates and rewrites nothing unchanged (`GameLogUpsert`) |
 
 ### 3. DB → `TrendCalculator` → `HotStreakScoring`
 | Check | Proves |
 |---|---|
-| `trend computed from 65 stored games` | Data read back from Postgres flows into the trend logic |
+| `trend computed from 64 stored games` | Data read back from Postgres flows into the trend logic |
 
-It also prints the recent and baseline averages and the hot score.
-
-### 4. Sleeper trending adds → `PlayerMatcher` → ESPN players
-Prints each of Sleeper's top 25 trending adds with the ESPN player it matched and the confidence.
-
-| Check | Proves |
-|---|---|
-| `Sleeper returned trending adds (25)` | Sleeper client and trending parser work |
-| `Sleeper player names loaded (2146)` | The ~2.5 MB player list parses (team entries skipped) |
-| `most trending names matched an ESPN player (25/25)` | `PlayerMatcher` maps real Sleeper names to ESPN ids; fails below 90% sure matches |
-
-Nothing from Sleeper is stored yet; `trending_snapshots` comes with Flyway V2.
+It also prints the recent and baseline averages and the hot score. If Luka Doncic is not stored, sections 2
+and 3 print `[SKIP]`.
 
 ## How to run it
 
@@ -81,8 +76,8 @@ docker compose exec postgres psql -U scout -d scout -c "SELECT count(*) FROM gam
 ```
 
 ## Notes
-- It writes to the **dev** database (players and game logs), never the test database. Reset with
+- It writes to the **dev** database (players, game logs, snapshots), never the test database. Reset with
   `docker compose down -v`.
 - It works on an empty or an already filled database.
-- Keep it updated as features land: switch to the wired `SyncService` (step 5.6), check stored Sleeper
-  snapshots (V2) and recommendations (step 6).
+- Each run appends a new set of Sleeper snapshots (that is the history).
+- Keep it updated as features land: recommendations and crowd signals (step 6).

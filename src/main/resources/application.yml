@@ -10,6 +10,22 @@ spring:
       ddl-auto: validate
     open-in-view: false
 
+scout:
+  espn:
+    teams-base-url: https://site.api.espn.com/apis/site/v2/sports/basketball/nba
+    game-log-base-url: https://site.web.api.espn.com/apis/common/v3/sports/basketball/nba
+    timeout: 10s
+  sleeper:
+    base-url: https://api.sleeper.app/v1
+    timeout: 30s               # the player list is ~2.5 MB
+    lookback-hours: 24
+    limit: 25
+  sync:
+    season: 2026               # year the season ends (2026 = 2025-26)
+    max-consecutive-failures: 10
+  matcher:
+    min-confidence: 0.85       # below this a name match is "unsure"
+
 logging:
   file:
     name: logs/scout.log
