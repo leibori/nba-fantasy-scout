@@ -21,7 +21,7 @@ For Luka Doncic, Nikola Jokic and Shai Gilgeous-Alexander:
 | Check | Proves |
 |---|---|
 | `fetched 65 games, 65 stored` | Game log client works and the DB holds exactly what ESPN returned |
-| `second insert added nothing (ON CONFLICT)` | Re-running adds no duplicates (`GameLogUpsert`) |
+| `second upsert changed nothing (ON CONFLICT)` | Re-running adds no duplicates and rewrites nothing unchanged (`GameLogUpsert`) |
 
 A player who is no longer on a current roster prints `[SKIP]` instead of failing.
 

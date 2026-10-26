@@ -40,24 +40,26 @@ class GameLogUpsertTest {
     }
 
     @Test
-    void insertsOnlyGamesNotStoredYet() {
-        assertEquals(2, upsert.insertNew(PLAYER_ID, List.of(game(1, 20), game(3, 24))));
+    void insertsNewGamesUpdatesCorrectedOnesAndSkipsUnchanged() {
+        assertEquals(2, upsert.upsert(PLAYER_ID, List.of(game(1, 20), game(3, 24))));
 
-        // day 1 is already stored, even with different stats; only day 2 is new
-        assertEquals(1, upsert.insertNew(PLAYER_ID, List.of(game(1, 99), game(2, 18))));
+        // day 1 corrected (20 -> 22 points), day 2 new, day 3 unchanged
+        assertEquals(2, upsert.upsert(PLAYER_ID, List.of(game(1, 22), game(2, 18), game(3, 24))));
 
-        assertEquals(3, gameLogs.count());
+        assertEquals(List.of(game(1, 22), game(2, 18), game(3, 24)), storedGames());
     }
 
     @Test
     void readsGamesBackInDateOrderWithEveryStat() {
         GameLog lateGame = new GameLog(LocalDate.of(2026, 1, 9), 36, 10, 21, 4, 7, 9, 11, 6, 2, 3, 5, 31);
-        upsert.insertNew(PLAYER_ID, List.of(lateGame, game(2, 18)));
+        upsert.upsert(PLAYER_ID, List.of(lateGame, game(2, 18)));
 
-        List<GameLog> stored = gameLogs.findByPlayerIdOrderByGameDateAsc(PLAYER_ID).stream()
+        assertEquals(List.of(game(2, 18), lateGame), storedGames());
+    }
+
+    private List<GameLog> storedGames() {
+        return gameLogs.findByPlayerIdOrderByGameDateAsc(PLAYER_ID).stream()
                 .map(GameLogEntity::toGameLog)
                 .toList();
-
-        assertEquals(List.of(game(2, 18), lateGame), stored);
     }
 }

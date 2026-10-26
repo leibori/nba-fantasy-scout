@@ -68,11 +68,11 @@ class DemoRunner implements CommandLineRunner {
                 continue;
             }
             List<GameLog> season = espn.fetchGameLogs(player.get().id(), SEASON);
-            upsert.insertNew(player.get().id(), season);
-            int secondRun = upsert.insertNew(player.get().id(), season);
+            upsert.upsert(player.get().id(), season);
+            int secondRun = upsert.upsert(player.get().id(), season);
             int stored = gameLogs.findByPlayerIdOrderByGameDateAsc(player.get().id()).size();
             check(name + ": fetched " + season.size() + " games, " + stored + " stored", season.size() > 0 && stored == season.size());
-            check(name + ": second insert added nothing (ON CONFLICT)", secondRun == 0);
+            check(name + ": second upsert changed nothing (ON CONFLICT)", secondRun == 0);
         }
 
         System.out.println("\n=== 3. Read back from the DB -> TrendCalculator -> HotStreakScoring");

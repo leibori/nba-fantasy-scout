@@ -41,7 +41,7 @@ Layered, package-by-feature. Each layer only calls the layer below it.
 - `recommend`: recommendation and keep/watch/drop rules
 - `roster`: `RosterService`, `RosterExtractor`, `PlayerMatcher`
 - `domain`: pure Java records and enums (`Player`, `GameLog`, `StatLine`, `StatCategory`), no JPA
-- `persistence`: JPA entities (`PlayerEntity`, `GameLogEntity`, converting to/from the domain records), Spring Data repositories, `GameLogUpsert` (`JdbcTemplate` batch with `ON CONFLICT DO NOTHING`)
+- `persistence`: JPA entities (`PlayerEntity`, `GameLogEntity`, converting to/from the domain records), Spring Data repositories, `GameLogUpsert` (`JdbcTemplate` batch with `ON CONFLICT DO UPDATE`, only when stats changed)
 - `config`: thread pool, Resilience4j, MDC, `@ConfigurationProperties`
 
 Controllers never touch repositories. APIs return DTO records, never JPA entities.
@@ -84,7 +84,7 @@ Controllers never touch repositories. APIs return DTO records, never JPA entitie
   - No ESPN ids in Sleeper data: map players by name via `PlayerMatcher`
   - Runs on a schedule inside the daily sync (add/drop snapshots), not on user request
 - API client behind an interface so the source can be swapped (or a CSV dataset loaded)
-- Idempotent inserts: `INSERT ... ON CONFLICT DO NOTHING`
+- Idempotent upserts: `INSERT ... ON CONFLICT DO UPDATE ... WHERE ... IS DISTINCT FROM` (new games inserted, ESPN stat corrections applied, unchanged rows untouched)
 - Concurrency (added after single-threaded version works): `@Async` + `CompletableFuture` on a custom `ThreadPoolTaskExecutor`, Resilience4j rate limiter, MDC propagated with a `TaskDecorator`
 - Measure sync time before/after concurrency (the number goes on the CV)
 
