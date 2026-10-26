@@ -26,6 +26,10 @@ public class EspnGameLogMapper {
 
     public List<GameLog> map(String json) {
         JsonNode root = JsonMapper.shared().readTree(json);
+        // a player with no games that season (rookie, injured all year) gets only a "filters" block
+        if (root.path("seasonTypes").isEmpty()) {
+            return List.of();
+        }
         Columns columns = Columns.from(root.path("labels"));
 
         JsonNode events = root.path("events");
@@ -38,7 +42,9 @@ public class EspnGameLogMapper {
             // the "total" category has no events and is skipped naturally
             for (JsonNode month : seasonType.path("categories")) {
                 for (JsonNode row : month.path("events")) {
-                    toGameLog(row, events, columns).ifPresent(games::add);
+                    if (countsForFantasy(events.path(row.path("eventId").asString("")))) {
+                        toGameLog(row, events, columns).ifPresent(games::add);
+                    }
                 }
             }
         }
@@ -47,6 +53,15 @@ public class EspnGameLogMapper {
 
     private static boolean isRegularSeason(JsonNode seasonType) {
         return seasonType.path("displayName").asString("").endsWith("Regular Season");
+    }
+
+    /**
+     * ESPN files these under "Regular Season" although fantasy leagues don't count them: the All-Star games
+     * (up to 3 on one day, which also breaks the one-game-per-date key), the Play-In and the NBA Cup final.
+     */
+    private static boolean countsForFantasy(JsonNode event) {
+        String note = event.path("eventNote").asString("");
+        return !note.startsWith("NBA All-Star") && !note.startsWith("NBA Play-In") && !note.equals("NBA Cup Championship");
     }
 
     private static Optional<GameLog> toGameLog(JsonNode row, JsonNode events, Columns columns) {
