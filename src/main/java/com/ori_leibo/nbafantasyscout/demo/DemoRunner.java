@@ -4,6 +4,8 @@ import com.ori_leibo.nbafantasyscout.client.EspnGameLogMapper;
 import com.ori_leibo.nbafantasyscout.client.EspnNbaDataClient;
 import com.ori_leibo.nbafantasyscout.client.EspnRosterMapper;
 import com.ori_leibo.nbafantasyscout.client.NbaDataClient;
+import com.ori_leibo.nbafantasyscout.client.SleeperClient;
+import com.ori_leibo.nbafantasyscout.client.SleeperMapper;
 import com.ori_leibo.nbafantasyscout.domain.GameLog;
 import com.ori_leibo.nbafantasyscout.domain.Player;
 import com.ori_leibo.nbafantasyscout.persistence.GameLogEntity;
@@ -11,12 +13,14 @@ import com.ori_leibo.nbafantasyscout.persistence.GameLogRepository;
 import com.ori_leibo.nbafantasyscout.persistence.GameLogUpsert;
 import com.ori_leibo.nbafantasyscout.persistence.PlayerEntity;
 import com.ori_leibo.nbafantasyscout.persistence.PlayerRepository;
+import com.ori_leibo.nbafantasyscout.roster.PlayerMatcher;
 import com.ori_leibo.nbafantasyscout.trend.HotStreakScoring;
 import com.ori_leibo.nbafantasyscout.trend.Trend;
 import com.ori_leibo.nbafantasyscout.trend.TrendCalculator;
 import java.net.http.HttpClient;
 import java.time.Duration;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.context.annotation.Profile;
@@ -87,6 +91,27 @@ class DemoRunner implements CommandLineRunner {
                     t.recent().points(), t.recent().minutes(), t.baseline().points(), t.baseline().minutes(),
                     new HotStreakScoring(0.4, 0.3, 0.3).score(t)));
         });
+
+        System.out.println("\n=== 4. Sleeper trending adds -> PlayerMatcher -> ESPN players");
+        SleeperClient sleeper = new SleeperClient(HttpClient.newHttpClient(), "https://api.sleeper.app/v1",
+                Duration.ofSeconds(30), 24, 25, new SleeperMapper());
+        Map<String, Integer> adds = sleeper.fetchTrendingAdds();
+        Map<String, String> sleeperNames = sleeper.fetchPlayerNames();
+        PlayerMatcher matcher = new PlayerMatcher(0.85);
+        int sure = 0;
+        for (Map.Entry<String, Integer> add : adds.entrySet()) {
+            String name = sleeperNames.getOrDefault(add.getKey(), "?");
+            Optional<PlayerMatcher.Match> match = matcher.match(name, roster);
+            if (match.isPresent() && !match.get().unsure()) {
+                sure++;
+            }
+            System.out.printf("  %-26s %6d adds -> %s%n", name, add.getValue(), match
+                    .map(m -> "%s (%.2f%s)".formatted(m.player().name(), m.confidence(), m.unsure() ? ", unsure" : ""))
+                    .orElse("no match"));
+        }
+        check("Sleeper returned trending adds (" + adds.size() + ")", !adds.isEmpty());
+        check("Sleeper player names loaded (" + sleeperNames.size() + ")", sleeperNames.size() > 400);
+        check("most trending names matched an ESPN player (" + sure + "/" + adds.size() + ")", sure * 10 >= adds.size() * 9);
 
         System.out.println(failures == 0 ? "\nDEMO PASSED\n" : "\nDEMO FAILED: " + failures + " check(s)\n");
     }

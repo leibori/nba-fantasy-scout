@@ -1,7 +1,7 @@
 # Demo runner
 
-`DemoRunner` is a manual end-to-end check against the **real ESPN API** and the **dev Postgres**:
-ESPN → database → `TrendCalculator`. It prints an `[OK]` / `[FAIL]` line per check and ends with
+`DemoRunner` is a manual end-to-end check against the **real ESPN and Sleeper APIs** and the **dev Postgres**:
+ESPN → database → `TrendCalculator`, plus Sleeper → `PlayerMatcher`. It prints an `[OK]` / `[FAIL]` line per check and ends with
 `DEMO PASSED` or `DEMO FAILED: N check(s)`.
 
 It runs only with the `demo` profile, so it never runs on a normal start or in the tests.
@@ -31,6 +31,17 @@ A player who is no longer on a current roster prints `[SKIP]` instead of failing
 | `trend computed from 65 stored games` | Data read back from Postgres flows into the trend logic |
 
 It also prints the recent and baseline averages and the hot score.
+
+### 4. Sleeper trending adds → `PlayerMatcher` → ESPN players
+Prints each of Sleeper's top 25 trending adds with the ESPN player it matched and the confidence.
+
+| Check | Proves |
+|---|---|
+| `Sleeper returned trending adds (25)` | Sleeper client and trending parser work |
+| `Sleeper player names loaded (2146)` | The ~2.5 MB player list parses (team entries skipped) |
+| `most trending names matched an ESPN player (25/25)` | `PlayerMatcher` maps real Sleeper names to ESPN ids; fails below 90% sure matches |
+
+Nothing from Sleeper is stored yet; `trending_snapshots` comes with Flyway V2.
 
 ## How to run it
 
@@ -73,5 +84,5 @@ docker compose exec postgres psql -U scout -d scout -c "SELECT count(*) FROM gam
 - It writes to the **dev** database (players and game logs), never the test database. Reset with
   `docker compose down -v`.
 - It works on an empty or an already filled database.
-- Keep it updated as features land: switch to the wired `SyncService` (step 5.6), add checks for Sleeper
-  trending (5.5) and recommendations (step 6).
+- Keep it updated as features land: switch to the wired `SyncService` (step 5.6), check stored Sleeper
+  snapshots (V2) and recommendations (step 6).
