@@ -64,7 +64,8 @@ class DemoRunner implements CommandLineRunner {
         check("players table holds them (" + stored.size() + ")", stored.size() >= result.players());
         check("some players have an injury status", stored.stream().anyMatch(p -> p.status() != null));
         check("no player's game logs failed", result.failedPlayers() == 0);
-        check("game_logs holds a season of games (" + gameLogs.count() + ")", gameLogs.count() > 10_000);
+        // more than one game per player on average: true from about the second game of a season
+        check("game_logs holds games for the roster (" + gameLogs.count() + ")", gameLogs.count() > result.players());
         check("Sleeper trending stored as snapshots (" + result.snapshots() + ", " + snapshots.count() + " in total)",
                 result.snapshots() > 0);
 

@@ -19,7 +19,7 @@ The time is the single-threaded baseline to compare with the concurrent sync (st
 | `players table holds them (518)` | Players were saved to Postgres |
 | `some players have an injury status` | Injury status parsing works |
 | `no player's game logs failed` | Every player's game log parsed (rookies and players out all season return no games, not an error) |
-| `game_logs holds a season of games (23569)` | Game logs were stored; fails below 10,000 rows |
+| `game_logs holds games for the roster (23569)` | Game logs were stored; fails at one game per player or fewer, so it also holds early in a season |
 | `Sleeper trending stored as snapshots (49, 98 in total)` | Sleeper adds/drops were matched to ESPN players and appended to `trending_snapshots` |
 
 On an already filled database "game logs new or changed" is 0: the upsert only writes real changes.
