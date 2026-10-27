@@ -59,11 +59,11 @@ Controllers never touch repositories. APIs return DTO records, never JPA entitie
 - Domain types: `GameLog`/`StatLine` records, `StatCategory` enum
 - `TrendCalculator` (Streams): 3-game rolling average, season baseline from games BEFORE the window (so the delta isn't diluted), delta per category
 - Baseline fallback: this season's earlier games when there are >= 5; otherwise last season's games (early season, `provisional`); no baseline (rookie) = no trend. The `Trend` records its baseline source
-- Two questions, two numbers: trend = "better than before?" (`HotStreakScoring`), value = "good right now?" (`ValueScoring`: 9-cat z-scores vs. the league this season, summed; percentages weighted low early because efficiency is noise in small samples, role stats settle fast)
+- Two questions, two numbers: trend = "better than before?" (`HotStreakScoring`), value = "good right now?" (`ValueScoring`: 9-cat z-scores vs. the league this season, summed; FG%/FT% as volume-weighted impact; percentages weighted low early because efficiency is noise in small samples, role stats settle fast. Not a `ScoringStrategy`: it scores a `StatLine` against a league, so it also rates rookies)
 - Early season (< 8 games this season): early hot = high value + (no baseline, i.e. rookie, OR big rise vs. last season); high value + same as last season = good, not hot. Results are `provisional` with their game count; at 8 games the normal trend rules take over
 - Hot / cold = hot score above / below thresholds in config (e.g. +/-0.15)
 - Detects both directions: breakout (positive deltas) and decline (negative deltas)
-- Scoring via Strategy pattern: `ScoringStrategy` interface; `HotStreakScoring` (weighted minutes + FGA + opportunity = (FGA + FTA + TOV) per minute, a usage-rate stand-in), `CategoryScoring`, `ValueScoring`; weights from `@ConfigurationProperties`
+- Scoring via Strategy pattern: `ScoringStrategy` interface; `HotStreakScoring` (weighted minutes + FGA + opportunity = (FGA + FTA + TOV) per minute, a usage-rate stand-in), `CategoryScoring`; weights from `@ConfigurationProperties`
 - Noise filter: minimum baseline games, and minimum minutes in the recent OR baseline period (so a benched starter still shows as a decline)
 - Recommendations: `Recommendation` sealed interface with `Keep` / `Watch` / `Drop(replacement)` records; pattern-matching `switch`
 - Keep/drop rules as an ordered list of `RosterRule` (Chain of Responsibility)
