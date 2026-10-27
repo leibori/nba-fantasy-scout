@@ -11,8 +11,18 @@ public record GameLog(
         int freeThrowsMade, int freeThrowsAttempted,
         int rebounds, int assists, int steals, int blocks, int turnovers, int points) {
 
-    /** The year the season ends, as ESPN counts it: games from August on belong to the next year's season. */
+    // seasons run August to July, named by the year they end (2027 = 2026-27), as ESPN counts them
+    private static final int FIRST_MONTH = 8;
+
     public int season() {
-        return gameDate.getMonthValue() >= 8 ? gameDate.getYear() + 1 : gameDate.getYear();
+        return gameDate.getMonthValue() >= FIRST_MONTH ? gameDate.getYear() + 1 : gameDate.getYear();
+    }
+
+    public static LocalDate seasonStart(int season) {
+        return LocalDate.of(season - 1, FIRST_MONTH, 1);
+    }
+
+    public static LocalDate seasonEnd(int season) {
+        return seasonStart(season + 1).minusDays(1);
     }
 }

@@ -5,6 +5,8 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyList;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -17,6 +19,7 @@ import com.ori_leibo.nbafantasyscout.domain.GameLog;
 import com.ori_leibo.nbafantasyscout.domain.Player;
 import com.ori_leibo.nbafantasyscout.domain.TrendingSnapshot;
 import com.ori_leibo.nbafantasyscout.domain.TrendingSnapshot.Type;
+import com.ori_leibo.nbafantasyscout.persistence.GameLogRepository;
 import com.ori_leibo.nbafantasyscout.persistence.GameLogUpsert;
 import com.ori_leibo.nbafantasyscout.persistence.PlayerRepository;
 import com.ori_leibo.nbafantasyscout.persistence.TrendingSnapshotEntity;
@@ -28,6 +31,7 @@ import java.time.LocalDate;
 import java.time.ZoneOffset;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -56,6 +60,8 @@ class SyncServiceTest {
     @Mock
     private GameLogUpsert gameLogUpsert;
     @Mock
+    private GameLogRepository gameLogs;
+    @Mock
     private TrendingSnapshotRepository snapshots;
     @Captor
     private ArgumentCaptor<List<TrendingSnapshotEntity>> savedSnapshots;
@@ -64,8 +70,26 @@ class SyncServiceTest {
 
     @BeforeEach
     void setUp() {
-        sync = new SyncService(nba, sleeper, new PlayerMatcher(0.85), players, gameLogUpsert, snapshots,
+        sync = new SyncService(nba, sleeper, new PlayerMatcher(0.85), players, gameLogUpsert, gameLogs, snapshots,
                 Clock.fixed(NOW, ZoneOffset.UTC), SEASON, 2);
+        // by default every player already has last season stored; the backfill test overrides this
+        lenient().when(gameLogs.findPlayerIdsWithGamesBetween(GameLog.seasonStart(SEASON - 1), GameLog.seasonEnd(SEASON - 1)))
+                .thenReturn(Set.of(LUKA.id(), JOKIC.id(), SGA.id()));
+    }
+
+    @Test
+    void fetchesLastSeasonOnlyForPlayersWhoDoNotHaveItYet() {
+        when(gameLogs.findPlayerIdsWithGamesBetween(GameLog.seasonStart(SEASON - 1), GameLog.seasonEnd(SEASON - 1)))
+                .thenReturn(Set.of(LUKA.id()));
+        when(nba.fetchPlayers()).thenReturn(List.of(LUKA, JOKIC));
+        when(nba.fetchGameLogs(anyLong(), eq(SEASON))).thenReturn(List.of());
+        when(nba.fetchGameLogs(JOKIC.id(), SEASON - 1)).thenReturn(GAMES);
+
+        SyncService.Result result = sync.syncDaily();
+
+        assertEquals(1, result.lastSeasonFetched());
+        verify(gameLogUpsert).upsert(JOKIC.id(), GAMES);
+        verify(nba, never()).fetchGameLogs(LUKA.id(), SEASON - 1);
     }
 
     @Test

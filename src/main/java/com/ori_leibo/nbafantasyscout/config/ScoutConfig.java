@@ -6,6 +6,7 @@ import com.ori_leibo.nbafantasyscout.client.EspnRosterMapper;
 import com.ori_leibo.nbafantasyscout.client.NbaDataClient;
 import com.ori_leibo.nbafantasyscout.client.SleeperClient;
 import com.ori_leibo.nbafantasyscout.client.SleeperMapper;
+import com.ori_leibo.nbafantasyscout.persistence.GameLogRepository;
 import com.ori_leibo.nbafantasyscout.persistence.GameLogUpsert;
 import com.ori_leibo.nbafantasyscout.persistence.PlayerRepository;
 import com.ori_leibo.nbafantasyscout.persistence.TrendingSnapshotRepository;
@@ -54,9 +55,9 @@ public class ScoutConfig {
 
     @Bean
     SyncService syncService(NbaDataClient nbaDataClient, SleeperClient sleeperClient, PlayerMatcher playerMatcher,
-                            PlayerRepository players, GameLogUpsert gameLogUpsert,
+                            PlayerRepository players, GameLogUpsert gameLogUpsert, GameLogRepository gameLogs,
                             TrendingSnapshotRepository snapshots, Clock clock, ScoutProperties properties) {
-        return new SyncService(nbaDataClient, sleeperClient, playerMatcher, players, gameLogUpsert, snapshots, clock,
+        return new SyncService(nbaDataClient, sleeperClient, playerMatcher, players, gameLogUpsert, gameLogs, snapshots, clock,
                 properties.sync().season(), properties.sync().maxConsecutiveFailures());
     }
 }

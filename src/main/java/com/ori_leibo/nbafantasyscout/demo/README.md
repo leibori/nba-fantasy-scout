@@ -10,8 +10,10 @@ A full run takes about 2.5 minutes: the sync fetches every rostered player's sea
 ## What it checks
 
 ### 1. Daily sync: ESPN players + game logs, Sleeper trending → DB
-Prints the sync summary, e.g. `518 players, 0 game logs new or changed, 0 failed players, 49 snapshots, took 140 s`.
-The time is the single-threaded baseline to compare with the concurrent sync (step 8).
+Prints the sync summary, e.g. `518 players, 0 game logs new or changed, last season fetched for 80, 0 failed players,
+49 snapshots, took 120 s`. The time is the single-threaded baseline to compare with the concurrent sync (step 8).
+On an empty database the first sync also fetches last season for every player (about 250 s); later syncs only
+re-ask the players who have no last-season games (rookies), about 80.
 
 | Check | Proves |
 |---|---|

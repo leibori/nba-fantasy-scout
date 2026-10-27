@@ -15,6 +15,14 @@ class GameLogTest {
         assertEquals(2027, game(LocalDate.of(2026, 8, 1)).season());
     }
 
+    @Test
+    void seasonDatesMatchSeason() {
+        assertEquals(LocalDate.of(2025, 8, 1), GameLog.seasonStart(2026));
+        assertEquals(LocalDate.of(2026, 7, 31), GameLog.seasonEnd(2026));
+        assertEquals(2026, game(GameLog.seasonStart(2026)).season());
+        assertEquals(2026, game(GameLog.seasonEnd(2026)).season());
+    }
+
     private static GameLog game(LocalDate date) {
         return new GameLog(date, 30, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
     }

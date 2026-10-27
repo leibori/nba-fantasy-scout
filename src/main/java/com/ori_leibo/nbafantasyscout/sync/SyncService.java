@@ -2,8 +2,10 @@ package com.ori_leibo.nbafantasyscout.sync;
 
 import com.ori_leibo.nbafantasyscout.client.NbaDataClient;
 import com.ori_leibo.nbafantasyscout.client.SleeperClient;
+import com.ori_leibo.nbafantasyscout.domain.GameLog;
 import com.ori_leibo.nbafantasyscout.domain.Player;
 import com.ori_leibo.nbafantasyscout.domain.TrendingSnapshot;
+import com.ori_leibo.nbafantasyscout.persistence.GameLogRepository;
 import com.ori_leibo.nbafantasyscout.persistence.GameLogUpsert;
 import com.ori_leibo.nbafantasyscout.persistence.PlayerEntity;
 import com.ori_leibo.nbafantasyscout.persistence.PlayerRepository;
@@ -17,11 +19,13 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
  * The daily ingestion: ESPN players and game logs, then Sleeper trending adds/drops.
+ * Last season's games are fetched once per player (early-season trends use them as the baseline).
  * Deliberately not one transaction: every save commits on its own, so a failure part-way keeps what was stored,
  * and the next run fills the gap (game log upserts are idempotent).
  */
@@ -34,19 +38,22 @@ public class SyncService {
     private final PlayerMatcher matcher;
     private final PlayerRepository players;
     private final GameLogUpsert gameLogUpsert;
+    private final GameLogRepository gameLogs;
     private final TrendingSnapshotRepository snapshots;
     private final Clock clock;
     private final int season;
     private final int maxConsecutiveFailures;
 
     public SyncService(NbaDataClient nba, SleeperClient sleeper, PlayerMatcher matcher, PlayerRepository players,
-                       GameLogUpsert gameLogUpsert, TrendingSnapshotRepository snapshots, Clock clock,
+                       GameLogUpsert gameLogUpsert, GameLogRepository gameLogs, TrendingSnapshotRepository snapshots,
+                       Clock clock,
                        int season, int maxConsecutiveFailures) {
         this.nba = nba;
         this.sleeper = sleeper;
         this.matcher = matcher;
         this.players = players;
         this.gameLogUpsert = gameLogUpsert;
+        this.gameLogs = gameLogs;
         this.snapshots = snapshots;
         this.clock = clock;
         this.season = season;
@@ -54,7 +61,8 @@ public class SyncService {
     }
 
     /** What one sync did; {@code took} is the wall time, the number to compare once fetching runs in parallel. */
-    public record Result(int players, int gamesChanged, int failedPlayers, int snapshots, Duration took) {
+    public record Result(int players, int gamesChanged, int lastSeasonFetched, int failedPlayers, int snapshots,
+                         Duration took) {
     }
 
     /** Throws only when the sync cannot go on: no players from ESPN, or ESPN failing call after call. */
@@ -64,13 +72,23 @@ public class SyncService {
         log.info("Daily sync started for season {}", season);
 
         List<Player> roster = syncPlayers();
+        int lastSeason = season - 1;
+        // shortcut: players with no games last season (rookies) are asked again every sync, ~80 calls;
+        // remember "checked" players if that ever matters
+        Set<Long> haveLastSeason = gameLogs.findPlayerIdsWithGamesBetween(
+                GameLog.seasonStart(lastSeason), GameLog.seasonEnd(lastSeason));
 
         int gamesChanged = 0;
+        int lastSeasonFetched = 0;
         int failedPlayers = 0;
         int consecutiveFailures = 0;
         for (Player player : roster) {
             try {
                 gamesChanged += gameLogUpsert.upsert(player.id(), nba.fetchGameLogs(player.id(), season));
+                if (!haveLastSeason.contains(player.id())) {
+                    gamesChanged += gameLogUpsert.upsert(player.id(), nba.fetchGameLogs(player.id(), lastSeason));
+                    lastSeasonFetched++;
+                }
                 consecutiveFailures = 0;
             } catch (RuntimeException e) {
                 if (Thread.currentThread().isInterrupted()) {
@@ -87,7 +105,7 @@ public class SyncService {
 
         int snapshotCount = syncTrending(roster, fetchedAt);
 
-        Result result = new Result(roster.size(), gamesChanged, failedPlayers, snapshotCount,
+        Result result = new Result(roster.size(), gamesChanged, lastSeasonFetched, failedPlayers, snapshotCount,
                 Duration.ofNanos(System.nanoTime() - start));
         log.info("Daily sync done: {}", result);
         return result;

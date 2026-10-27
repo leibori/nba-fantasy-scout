@@ -56,8 +56,9 @@ class DemoRunner implements CommandLineRunner {
     public void run(String... args) {
         System.out.println("\n=== 1. Daily sync: ESPN players + game logs, Sleeper trending -> DB");
         SyncService.Result result = sync.syncDaily();
-        System.out.printf("  %d players, %d game logs new or changed, %d failed players, %d snapshots, took %d s%n",
-                result.players(), result.gamesChanged(), result.failedPlayers(), result.snapshots(),
+        System.out.printf("  %d players, %d game logs new or changed, last season fetched for %d, %d failed players,"
+                        + " %d snapshots, took %d s%n",
+                result.players(), result.gamesChanged(), result.lastSeasonFetched(), result.failedPlayers(), result.snapshots(),
                 result.took().toSeconds());
         List<Player> stored = players.findAll().stream().map(PlayerEntity::toPlayer).toList();
         check("ESPN returned 30 teams' worth of players (" + result.players() + ")", result.players() > 400);
