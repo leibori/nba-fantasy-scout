@@ -26,12 +26,12 @@ class EspnRosterMapperTest {
     }
 
     @Test
-    void readsPlayersWithTeamPositionAndInjuryStatus() throws IOException {
-        // trimmed real Lakers roster: one healthy player, one Out, one Day-To-Day
+    void readsPlayersWithTeamPositionInjuryStatusAndExperience() throws IOException {
+        // trimmed real Lakers roster: one healthy player, one Out, one Day-To-Day; Carr is a rookie (0 years)
         assertEquals(List.of(
-                        new Player(3945274, "Luka Doncic", "LAL", "G", null),
-                        new Player(5113969, "Cameron Carr", "LAL", "G", "Out"),
-                        new Player(4592691, "Jake LaRavia", "LAL", "F", "Day-To-Day")),
+                        new Player(3945274, "Luka Doncic", "LAL", "G", null, 9),
+                        new Player(5113969, "Cameron Carr", "LAL", "G", "Out", 0),
+                        new Player(4592691, "Jake LaRavia", "LAL", "F", "Day-To-Day", 5)),
                 mapper.players(fixture("roster.json")));
     }
 
@@ -50,6 +50,6 @@ class EspnRosterMapperTest {
                 """;
 
         // only the last athlete is usable; a missing position is allowed and stays null
-        assertEquals(List.of(new Player(2, "No Position", "LAL", null, null)), mapper.players(json));
+        assertEquals(List.of(new Player(2, "No Position", "LAL", null, null, null)), mapper.players(json));
     }
 }

@@ -24,10 +24,10 @@ class PlayerRepositoryTest {
 
     @Test
     void savingAKnownPlayerAgainUpdatesTheRowInsteadOfAddingOne() {
-        players.saveAndFlush(PlayerEntity.from(new Player(3945274, "Luka Doncic", "LAL", "G", null)));
+        players.saveAndFlush(PlayerEntity.from(new Player(3945274, "Luka Doncic", "LAL", "G", null, null)));
 
         // next day's sync: same ESPN id, now injured
-        players.saveAndFlush(PlayerEntity.from(new Player(3945274, "Luka Doncic", "LAL", "G", "Out")));
+        players.saveAndFlush(PlayerEntity.from(new Player(3945274, "Luka Doncic", "LAL", "G", "Out", null)));
 
         // read with SQL, not JPA, so the check hits the table and not Hibernate's cache
         assertEquals(1, jdbc.queryForObject("SELECT count(*) FROM players", Integer.class));
@@ -37,8 +37,8 @@ class PlayerRepositoryTest {
     @Test
     void clearsTheTeamOfPlayersNoLongerOnARoster() {
         players.saveAllAndFlush(List.of(
-                PlayerEntity.from(new Player(1, "Still Rostered", "LAL", "G", null)),
-                PlayerEntity.from(new Player(2, "Waived Player", "BOS", "F", null))));
+                PlayerEntity.from(new Player(1, "Still Rostered", "LAL", "G", null, null)),
+                PlayerEntity.from(new Player(2, "Waived Player", "BOS", "F", null, null))));
 
         assertEquals(1, players.clearTeamExcept(List.of(1L)));
 

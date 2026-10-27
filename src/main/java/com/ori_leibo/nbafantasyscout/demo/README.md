@@ -41,8 +41,9 @@ It also prints the recent and baseline averages and the hot score. If Luka Donci
 and 3 print `[SKIP]`.
 
 ### 4. Form of every rostered player (`TrendService`)
-Prints the count per form (e.g. `{EARLY_HOT=25, GOOD=69, NEUTRAL=350, EARLY_COLD=74}`), the top 10 by value,
-every EARLY_HOT player, and the value of the 50th / 100th / 150th player (used to set `scout.trend.high-value`).
+Prints the count per form (e.g. `{EARLY_HOT=21, RETURNING=4, GOOD=69, NEUTRAL=357, EARLY_COLD=67}`), the top 10 by
+value, every EARLY_HOT and RETURNING player, and the value of the 50th / 100th / 150th player (used to set
+`scout.trend.high-value`).
 
 | Check | Proves |
 |---|---|

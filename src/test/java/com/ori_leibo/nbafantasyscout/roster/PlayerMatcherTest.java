@@ -73,6 +73,6 @@ class PlayerMatcherTest {
     }
 
     private static Player player(long id, String name) {
-        return new Player(id, name, "TST", "G", null);
+        return new Player(id, name, "TST", "G", null, null);
     }
 }

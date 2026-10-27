@@ -25,7 +25,7 @@ public record ScoutProperties(Espn espn, Sleeper sleeper, Sync sync, Matcher mat
      * {@code leagueMinMinutes} this season.
      */
     public record Trend(int window, int minBaselineGames, double minMinutes, double hotThreshold, double highValue,
-                        double leagueMinMinutes, double percentageWeight) {
+                        double earlyColdMinMinutes, double leagueMinMinutes, double percentageWeight) {
     }
 
     public record HotStreak(double minutesWeight, double fieldGoalsAttemptedWeight, double opportunityWeight) {

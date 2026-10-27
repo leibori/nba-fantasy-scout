@@ -48,7 +48,7 @@ Controllers never touch repositories. APIs return DTO records, never JPA entitie
 
 ## Data model
 - Target league: Yahoo H2H 9-cat (FG%, FT%, 3PTM, PTS, REB, AST, ST, BLK, TO)
-- `players`: id (ESPN athlete id), name, team, position, status (injury, from ESPN roster `injuries[0].status`, e.g. `Out`, `Day-To-Day`; null = healthy)
+- `players`: id (ESPN athlete id), name, team (null = no longer on a roster), position, status (injury, from ESPN roster `injuries[0].status`, e.g. `Out`, `Day-To-Day`; null = healthy), experience_years (Flyway V3, ESPN `experience.years`, 0 = rookie)
 - `game_logs`: id, player_id (FK), game_date, minutes, fgm, fga, fg3m, ftm, fta, reb, ast, stl, blk, tov, pts; UNIQUE (player_id, game_date)
 - `trending_snapshots` (Flyway V2): player_id (FK), type (ADD/DROP), count, fetched_at; keeps history ("adds rising 3 days")
 - Only raw counting stats are stored; FG%/FT% (volume-weighted) and per-minute rates are computed in Java
@@ -60,7 +60,7 @@ Controllers never touch repositories. APIs return DTO records, never JPA entitie
 - `TrendCalculator` (Streams): 3-game rolling average, season baseline from games BEFORE the window (so the delta isn't diluted), delta per category
 - Baseline fallback: this season's earlier games when there are >= 5; otherwise last season's games (early season, `provisional`); no baseline (rookie) = no trend. The `Trend` records its baseline source
 - Two questions, two numbers: trend = "better than before?" (`HotStreakScoring`), value = "good right now?" (`ValueScoring`: 9-cat z-scores vs. the league this season, summed; FG%/FT% as volume-weighted impact; percentages weighted low early because efficiency is noise in small samples, role stats settle fast. Not a `ScoringStrategy`: it scores a `StatLine` against a league, so it also rates rookies)
-- Early season (< 8 games this season): early hot = high value + (no baseline, i.e. rookie, OR big rise vs. last season); high value + same as last season = good, not hot. Results are `provisional` with their game count; at 8 games the normal trend rules take over
+- Early season (< 8 games this season): early hot = high value + (rookie, OR big rise vs. last season); high value + same as last season = good, not hot; high value + no games last season but earlier NBA seasons = returning (from ESPN `experience.years`, 0 = rookie); early cold only with >= 18 baseline minutes (a real role). Results are `provisional` with their game count; at 8 games the normal trend rules take over
 - Hot / cold = hot score above / below thresholds in config (e.g. +/-0.15)
 - Detects both directions: breakout (positive deltas) and decline (negative deltas)
 - Scoring via Strategy pattern: `ScoringStrategy` interface; `HotStreakScoring` (weighted minutes + FGA + opportunity = (FGA + FTA + TOV) per minute, a usage-rate stand-in), `CategoryScoring`; weights from `@ConfigurationProperties`

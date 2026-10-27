@@ -120,6 +120,8 @@ class DemoRunner implements CommandLineRunner {
         byValue.stream().limit(10).forEach(DemoRunner::printForm);
         System.out.println("  early hot, by value:");
         byValue.stream().filter(f -> f.form() == FormClassifier.Form.EARLY_HOT).forEach(DemoRunner::printForm);
+        System.out.println("  returning from a lost season:");
+        byValue.stream().filter(f -> f.form() == FormClassifier.Form.RETURNING).forEach(DemoRunner::printForm);
         if (byValue.size() >= 150) {
             System.out.printf("  value of the 50th / 100th / 150th player: %.2f / %.2f / %.2f%n",
                     byValue.get(49).value(), byValue.get(99).value(), byValue.get(149).value());

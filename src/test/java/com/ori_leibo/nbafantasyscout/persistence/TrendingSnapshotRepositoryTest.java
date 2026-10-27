@@ -26,7 +26,7 @@ class TrendingSnapshotRepositoryTest {
 
     @Test
     void storesBothTypesAndReadsAPlayersHistoryOldestFirst() {
-        players.save(PlayerEntity.from(new Player(1, "Alex Caruso", "OKC", "G", null)));
+        players.save(PlayerEntity.from(new Player(1, "Alex Caruso", "OKC", "G", null, null)));
         // Postgres keeps microseconds, so the test uses whole seconds to compare exactly
         TrendingSnapshot today = new TrendingSnapshot(1, Type.DROP, 120, Instant.parse("2026-10-26T06:00:00Z"));
         TrendingSnapshot yesterday = new TrendingSnapshot(1, Type.ADD, 30276, Instant.parse("2026-10-25T06:00:00Z"));

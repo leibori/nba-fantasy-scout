@@ -32,7 +32,7 @@ class GameLogUpsertTest {
     @BeforeEach
     void storePlayer() {
         // flush now: the JDBC insert below must see the player row for the foreign key
-        players.saveAndFlush(PlayerEntity.from(new Player(PLAYER_ID, "Test Player", "LAL", "G", null)));
+        players.saveAndFlush(PlayerEntity.from(new Player(PLAYER_ID, "Test Player", "LAL", "G", null, null)));
     }
 
     private static GameLog game(int day, int points) {

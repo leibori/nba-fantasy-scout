@@ -37,7 +37,7 @@ class GameLogRepositoryTest {
     }
 
     private static PlayerEntity player(long id) {
-        return PlayerEntity.from(new Player(id, "Player " + id, "LAL", "G", null));
+        return PlayerEntity.from(new Player(id, "Player " + id, "LAL", "G", null, null));
     }
 
     private static GameLog game(int year, int month, int day) {

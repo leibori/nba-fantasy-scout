@@ -45,29 +45,32 @@ class TrendServiceTest {
     @Test
     void judgesRookiesAndVeteransEarlyInTheSeasonAndSkipsOffRosterPlayers() {
         players.saveAllAndFlush(List.of(
-                player(1, "Big Rookie", "DUK"), player(2, "Steady Veteran", "LAL"),
-                player(3, "Bench Guard", "BOS"), player(4, "Waived Player", null)));
+                player(1, "Big Rookie", "DUK", 0), player(2, "Steady Veteran", "LAL", 6),
+                player(3, "Bench Guard", "BOS", 3), player(4, "Waived Player", null, 2),
+                player(5, "Back From Injury", "IND", 7)));
         upsert.upsert(1, games(2026, 10, 3, 34, 24));                                  // rookie, 3 big games
         upsert.upsert(2, games(2026, 10, 3, 30, 15));                                  // veteran, as last season
         upsert.upsert(2, games(2026, 1, 10, 30, 15));
         upsert.upsert(3, games(2026, 10, 3, 8, 3));                                    // bench, 8 minutes
         upsert.upsert(3, games(2026, 1, 10, 8, 3));
         upsert.upsert(4, games(2026, 10, 3, 34, 30));
+        upsert.upsert(5, games(2026, 10, 3, 34, 26));                                  // missed all of last season
 
         // window 3, 5 baseline games, 15 minutes; hot at 0.15, high value from 1; league = 15+ minutes
         TrendService service = new TrendService(players, gameLogs, new TrendCalculator(3, 5, 15),
-                new HotStreakScoring(0.4, 0.3, 0.3), new FormClassifier(new HotStreakScoring(0.4, 0.3, 0.3), 0.15, 1),
+                new HotStreakScoring(0.4, 0.3, 0.3), new FormClassifier(new HotStreakScoring(0.4, 0.3, 0.3), 0.15, 1, 18),
                 SEASON, 15, 0.5);
 
         Map<String, PlayerForm> forms = service.formOfAllPlayers().stream()
                 .collect(Collectors.toMap(form -> form.player().name(), form -> form));
 
-        assertEquals(3, forms.size(), "the waived player has no team and is left out");
+        assertEquals(4, forms.size(), "the waived player has no team and is left out");
 
         PlayerForm rookie = forms.get("Big Rookie");
         assertEquals(3, rookie.gamesThisSeason());
         assertNull(rookie.trend(), "no last season, so no baseline");
         assertEquals(Form.EARLY_HOT, rookie.form());
+        assertEquals(Form.RETURNING, forms.get("Back From Injury").form());
 
         PlayerForm veteran = forms.get("Steady Veteran");
         assertEquals(Trend.Baseline.LAST_SEASON, veteran.trend().baselineSource());
@@ -79,8 +82,8 @@ class TrendServiceTest {
         assertEquals(true, forms.get("Bench Guard").value() < 0);
     }
 
-    private static PlayerEntity player(long id, String name, String team) {
-        return PlayerEntity.from(new Player(id, name, team, "G", null));
+    private static PlayerEntity player(long id, String name, String team, int experienceYears) {
+        return PlayerEntity.from(new Player(id, name, team, "G", null, experienceYears));
     }
 
     // {@code count} identical games on consecutive days from year-month-01

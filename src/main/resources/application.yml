@@ -31,6 +31,7 @@ scout:
     min-minutes: 15            # per game, in the recent or the baseline period
     hot-threshold: 0.15        # hot score above +0.15 = hot, below -0.15 = cold
     high-value: 1.0            # value (sum of 9-cat z-scores) that counts as "good right now"; about a top-100 player
+    early-cold-min-minutes: 18 # early in a season, only a player with this many baseline minutes can be cold
     league-min-minutes: 15     # players averaging fewer minutes are left out of the value league
     percentage-weight: 0.5     # FG% / FT% share of the value; low because shooting is noisy in small samples
   hot-streak:

@@ -8,6 +8,9 @@
     {
       "id": "3945274",
       "fullName": "Luka Doncic",
+      "experience": {
+        "years": 9
+      },
       "position": {
         "abbreviation": "G"
       },
@@ -16,6 +19,9 @@
     {
       "id": "5113969",
       "fullName": "Cameron Carr",
+      "experience": {
+        "years": 0
+      },
       "position": {
         "abbreviation": "G"
       },
@@ -29,6 +35,9 @@
     {
       "id": "4592691",
       "fullName": "Jake LaRavia",
+      "experience": {
+        "years": 5
+      },
       "position": {
         "abbreviation": "F"
       },

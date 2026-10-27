@@ -45,9 +45,9 @@ class SyncServiceTest {
 
     private static final int SEASON = 2026;
     private static final Instant NOW = Instant.parse("2026-10-26T06:00:00Z");
-    private static final Player LUKA = new Player(1, "Luka Dončić", "LAL", "G", null);
-    private static final Player JOKIC = new Player(2, "Nikola Jokić", "DEN", "C", null);
-    private static final Player SGA = new Player(3, "Shai Gilgeous-Alexander", "OKC", "G", null);
+    private static final Player LUKA = new Player(1, "Luka Dončić", "LAL", "G", null, null);
+    private static final Player JOKIC = new Player(2, "Nikola Jokić", "DEN", "C", null, null);
+    private static final Player SGA = new Player(3, "Shai Gilgeous-Alexander", "OKC", "G", null, null);
     private static final List<GameLog> GAMES = List.of(
             new GameLog(LocalDate.of(2026, 1, 2), 36, 10, 21, 4, 7, 9, 11, 6, 2, 1, 3, 31));
 

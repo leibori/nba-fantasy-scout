@@ -51,7 +51,13 @@ public class EspnRosterMapper {
         return Optional.of(new Player(id, name, team,
                 textOrNull(athlete.path("position").path("abbreviation")),
                 // injuries is empty for a healthy player
-                textOrNull(athlete.path("injuries").path(0).path("status"))));
+                textOrNull(athlete.path("injuries").path(0).path("status")),
+                experienceYears(athlete.path("experience").path("years"))));
+    }
+
+    // 0 = rookie; missing stays null rather than pretending to be a rookie
+    private static Integer experienceYears(JsonNode years) {
+        return years.isNumber() ? years.asInt() : null;
     }
 
     private static String textOrNull(JsonNode node) {

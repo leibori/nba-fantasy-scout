@@ -100,10 +100,20 @@ public class TrendService {
             forms.add(new PlayerForm(player, thisSeason.get(player.id()).size(), trend.orElse(null),
                     trend.map(hotScoring::score).orElse(null),
                     value.isPresent() ? value.getAsDouble() : null,
-                    classifier.classify(trend, value, !last.isEmpty())));
+                    classifier.classify(trend, value, history(player, last))));
         }
         log.info("Computed form of {} players against a value league of {} in {} ms",
                 forms.size(), league.size(), (System.nanoTime() - start) / 1_000_000);
         return forms;
+    }
+
+    // no games last season: a rookie by ESPN's experience count (0), otherwise back from a lost season
+    private static FormClassifier.History history(Player player, List<GameLog> lastSeason) {
+        if (!lastSeason.isEmpty()) {
+            return FormClassifier.History.PLAYED_LAST_SEASON;
+        }
+        return Integer.valueOf(0).equals(player.experienceYears())
+                ? FormClassifier.History.ROOKIE
+                : FormClassifier.History.RETURNING;
     }
 }
