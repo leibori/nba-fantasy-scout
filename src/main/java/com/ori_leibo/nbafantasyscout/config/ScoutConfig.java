@@ -10,8 +10,12 @@ import com.ori_leibo.nbafantasyscout.persistence.GameLogRepository;
 import com.ori_leibo.nbafantasyscout.persistence.GameLogUpsert;
 import com.ori_leibo.nbafantasyscout.persistence.PlayerRepository;
 import com.ori_leibo.nbafantasyscout.persistence.TrendingSnapshotRepository;
+import com.ori_leibo.nbafantasyscout.recommend.TrendService;
 import com.ori_leibo.nbafantasyscout.roster.PlayerMatcher;
 import com.ori_leibo.nbafantasyscout.sync.SyncService;
+import com.ori_leibo.nbafantasyscout.trend.FormClassifier;
+import com.ori_leibo.nbafantasyscout.trend.HotStreakScoring;
+import com.ori_leibo.nbafantasyscout.trend.TrendCalculator;
 import java.net.http.HttpClient;
 import java.time.Clock;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
@@ -59,5 +63,29 @@ public class ScoutConfig {
                             TrendingSnapshotRepository snapshots, Clock clock, ScoutProperties properties) {
         return new SyncService(nbaDataClient, sleeperClient, playerMatcher, players, gameLogUpsert, gameLogs, snapshots, clock,
                 properties.sync().season(), properties.sync().maxConsecutiveFailures());
+    }
+
+    @Bean
+    TrendCalculator trendCalculator(ScoutProperties properties) {
+        ScoutProperties.Trend trend = properties.trend();
+        return new TrendCalculator(trend.window(), trend.minBaselineGames(), trend.minMinutes());
+    }
+
+    @Bean
+    HotStreakScoring hotStreakScoring(ScoutProperties properties) {
+        ScoutProperties.HotStreak weights = properties.hotStreak();
+        return new HotStreakScoring(weights.minutesWeight(), weights.fieldGoalsAttemptedWeight(), weights.opportunityWeight());
+    }
+
+    @Bean
+    FormClassifier formClassifier(HotStreakScoring hotStreakScoring, ScoutProperties properties) {
+        return new FormClassifier(hotStreakScoring, properties.trend().hotThreshold(), properties.trend().highValue());
+    }
+
+    @Bean
+    TrendService trendService(PlayerRepository players, GameLogRepository gameLogs, TrendCalculator trendCalculator,
+                              HotStreakScoring hotStreakScoring, FormClassifier formClassifier, ScoutProperties properties) {
+        return new TrendService(players, gameLogs, trendCalculator, hotStreakScoring, formClassifier,
+                properties.sync().season(), properties.trend().leagueMinMinutes(), properties.trend().percentageWeight());
     }
 }

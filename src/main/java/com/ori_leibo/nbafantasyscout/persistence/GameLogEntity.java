@@ -39,6 +39,10 @@ public class GameLogEntity {
         // for JPA
     }
 
+    public long playerId() {
+        return playerId;
+    }
+
     public GameLog toGameLog() {
         return new GameLog(gameDate, minutes, fgm, fga, fg3m, ftm, fta, reb, ast, stl, blk, tov, pts);
     }

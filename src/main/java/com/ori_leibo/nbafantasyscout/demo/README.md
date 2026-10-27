@@ -40,6 +40,15 @@ Sleeper names with no sure ESPN match (e.g. a free agent) are logged as WARN and
 It also prints the recent and baseline averages and the hot score. If Luka Doncic is not stored, sections 2
 and 3 print `[SKIP]`.
 
+### 4. Form of every rostered player (`TrendService`)
+Prints the count per form (e.g. `{EARLY_HOT=25, GOOD=69, NEUTRAL=350, EARLY_COLD=74}`), the top 10 by value,
+every EARLY_HOT player, and the value of the 50th / 100th / 150th player (used to set `scout.trend.high-value`).
+
+| Check | Proves |
+|---|---|
+| `every rostered player has a form (518)` | Every player with a team gets trend, value and form |
+| `players with games this season have a value (408)` | The value league was built and scored |
+
 ## How to run it
 
 **1. Start the dev DB** (once per boot):

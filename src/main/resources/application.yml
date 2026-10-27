@@ -25,6 +25,18 @@ scout:
     max-consecutive-failures: 10
   matcher:
     min-confidence: 0.85       # below this a name match is "unsure"
+  trend:
+    window: 3                  # recent games compared with the baseline
+    min-baseline-games: 5      # fewer earlier games this season -> last season is the (provisional) baseline
+    min-minutes: 15            # per game, in the recent or the baseline period
+    hot-threshold: 0.15        # hot score above +0.15 = hot, below -0.15 = cold
+    high-value: 1.0            # value (sum of 9-cat z-scores) that counts as "good right now"; about a top-100 player
+    league-min-minutes: 15     # players averaging fewer minutes are left out of the value league
+    percentage-weight: 0.5     # FG% / FT% share of the value; low because shooting is noisy in small samples
+  hot-streak:
+    minutes-weight: 0.4
+    field-goals-attempted-weight: 0.3
+    opportunity-weight: 0.3
 
 logging:
   file:
