@@ -11,7 +11,8 @@ class CategoryScoringTest {
     // recent: 4 blocks, 1 turnover; baseline: 1 block, 3 turnovers
     private final Trend trend = new Trend(
             new StatLine(30, 0, 0, 0, 0, 0, 0, 0, 0, 4, 1, 0),
-            new StatLine(30, 0, 0, 0, 0, 0, 0, 0, 0, 1, 3, 0));
+            new StatLine(30, 0, 0, 0, 0, 0, 0, 0, 0, 1, 3, 0),
+            Trend.Baseline.THIS_SEASON);
 
     @Test
     void scoresTheCategoryDelta() {

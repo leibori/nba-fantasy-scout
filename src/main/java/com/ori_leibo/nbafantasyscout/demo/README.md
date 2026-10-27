@@ -33,7 +33,7 @@ Sleeper names with no sure ESPN match (e.g. a free agent) are logged as WARN and
 ### 3. DB → `TrendCalculator` → `HotStreakScoring`
 | Check | Proves |
 |---|---|
-| `trend computed from 64 stored games` | Data read back from Postgres flows into the trend logic |
+| `trend computed from 3 games this season, 64 last season` | Data read back from Postgres flows into the trend logic; early in a season the baseline is last season (printed as `LAST_SEASON, provisional`) |
 
 It also prints the recent and baseline averages and the hot score. If Luka Doncic is not stored, sections 2
 and 3 print `[SKIP]`.

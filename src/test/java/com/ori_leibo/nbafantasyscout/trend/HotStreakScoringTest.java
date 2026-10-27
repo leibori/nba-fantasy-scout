@@ -19,14 +19,14 @@ class HotStreakScoringTest {
         StatLine starter = line(30, 16, 4, 4); // opportunity 24 / 30 = 0.8
 
         // minutes +50%, FGA +100%, opportunity +33.3%
-        assertEquals(0.5 + 1.0 + 1.0 / 3, scoring.score(new Trend(starter, bench)), 1e-9);
-        assertEquals(-1.0 / 3 - 0.5 - 0.25, scoring.score(new Trend(bench, starter)), 1e-9);
+        assertEquals(0.5 + 1.0 + 1.0 / 3, scoring.score(new Trend(starter, bench, Trend.Baseline.THIS_SEASON)), 1e-9);
+        assertEquals(-1.0 / 3 - 0.5 - 0.25, scoring.score(new Trend(bench, starter, Trend.Baseline.THIS_SEASON)), 1e-9);
     }
 
     @Test
     void zeroBaselineCountsAsNoChange() {
         StatLine nothing = line(0, 0, 0, 0);
 
-        assertEquals(0, scoring.score(new Trend(line(30, 16, 4, 4), nothing)));
+        assertEquals(0, scoring.score(new Trend(line(30, 16, 4, 4), nothing, Trend.Baseline.THIS_SEASON)));
     }
 }

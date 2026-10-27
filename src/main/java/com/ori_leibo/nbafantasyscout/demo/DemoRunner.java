@@ -82,12 +82,15 @@ class DemoRunner implements CommandLineRunner {
             List<GameLog> games = gameLogs.findByPlayerIdOrderByGameDateAsc(player.id()).stream()
                     .map(GameLogEntity::toGameLog)
                     .toList();
-            Optional<Trend> trend = new TrendCalculator(3, 5, 15).calculate(games);
-            check(player.name() + ": trend computed from " + games.size() + " stored games", trend.isPresent());
+            List<GameLog> thisSeason = games.stream().filter(g -> g.season() == season).toList();
+            List<GameLog> lastSeason = games.stream().filter(g -> g.season() == season - 1).toList();
+            Optional<Trend> trend = new TrendCalculator(3, 5, 15).calculate(thisSeason, lastSeason);
+            check(player.name() + ": trend computed from " + thisSeason.size() + " games this season, "
+                    + lastSeason.size() + " last season", trend.isPresent());
             trend.ifPresent(t -> System.out.printf(
-                    "  recent %.1f pts / %.1f min, baseline %.1f pts / %.1f min, hot score %.3f%n",
-                    t.recent().points(), t.recent().minutes(), t.baseline().points(), t.baseline().minutes(),
-                    new HotStreakScoring(0.4, 0.3, 0.3).score(t)));
+                    "  recent %.1f pts / %.1f min, baseline (%s%s) %.1f pts / %.1f min, hot score %.3f%n",
+                    t.recent().points(), t.recent().minutes(), t.baselineSource(), t.provisional() ? ", provisional" : "",
+                    t.baseline().points(), t.baseline().minutes(), new HotStreakScoring(0.4, 0.3, 0.3).score(t)));
         }
 
         System.out.println(failures == 0 ? "\nDEMO PASSED\n" : "\nDEMO FAILED: " + failures + " check(s)\n");
