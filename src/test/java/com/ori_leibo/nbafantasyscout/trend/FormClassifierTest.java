@@ -21,9 +21,10 @@ class FormClassifierTest {
         return new StatLine(minutes, 5, 10, 2, 3, 4, 6, 4, 1, 1, 2, 15);
     }
 
-    // hot at +/-0.15, high value from 3, early cold needs 18 baseline minutes; the hot score is fixed per case
+    // hot at +/-0.15, high value from 3, early cold needs 18 baseline minutes and a 15% minutes drop;
+    // the hot score is fixed per case
     private static FormClassifier withHotScore(double hotScore) {
-        return new FormClassifier(trend -> hotScore, 0.15, 3, 18);
+        return new FormClassifier(trend -> hotScore, 0.15, 3, 18, 0.15);
     }
 
     @Test
@@ -35,13 +36,20 @@ class FormClassifierTest {
     }
 
     @Test
-    void earlyRiseNeedsHighValueAndEarlyDropNeedsARealRole() {
+    void earlyRiseNeedsHighValueAndEarlyDropNeedsALostRole() {
         Optional<Trend> benchBaseline = Optional.of(new Trend(line(10), line(14), Trend.Baseline.LAST_SEASON));
+        Optional<Trend> lostMinutes = Optional.of(new Trend(line(24), line(30), Trend.Baseline.LAST_SEASON));
+        Optional<Trend> sameMinutes = Optional.of(new Trend(line(29), line(30), Trend.Baseline.LAST_SEASON));
 
         assertEquals(Form.EARLY_HOT, withHotScore(0.3).classify(EARLY, HIGH_VALUE, History.PLAYED_LAST_SEASON));
         assertEquals(Form.NEUTRAL, withHotScore(0.3).classify(EARLY, LOW_VALUE, History.PLAYED_LAST_SEASON));
-        assertEquals(Form.EARLY_COLD, withHotScore(-0.3).classify(EARLY, LOW_VALUE, History.PLAYED_LAST_SEASON));
+        assertEquals(Form.EARLY_COLD, withHotScore(-0.3).classify(lostMinutes, LOW_VALUE, History.PLAYED_LAST_SEASON));
+        assertEquals(Form.NEUTRAL, withHotScore(-0.3).classify(sameMinutes, LOW_VALUE, History.PLAYED_LAST_SEASON),
+                "fewer shots in the same minutes is early-season noise");
         assertEquals(Form.NEUTRAL, withHotScore(-0.3).classify(benchBaseline, LOW_VALUE, History.PLAYED_LAST_SEASON));
+        assertEquals(Form.COLD, withHotScore(-0.3).classify(
+                Optional.of(new Trend(line(29), line(30), Trend.Baseline.THIS_SEASON)), LOW_VALUE, History.PLAYED_LAST_SEASON),
+                "an established trend needs no minutes drop");
         assertEquals(Form.GOOD, withHotScore(0.0).classify(EARLY, HIGH_VALUE, History.PLAYED_LAST_SEASON));
     }
 

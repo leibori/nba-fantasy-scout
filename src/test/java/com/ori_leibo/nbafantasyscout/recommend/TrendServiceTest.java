@@ -58,7 +58,7 @@ class TrendServiceTest {
 
         // window 3, 5 baseline games, 15 minutes; hot at 0.15, high value from 1; league = 15+ minutes
         TrendService service = new TrendService(players, gameLogs, new TrendCalculator(3, 5, 15),
-                new HotStreakScoring(0.4, 0.3, 0.3), new FormClassifier(new HotStreakScoring(0.4, 0.3, 0.3), 0.15, 1, 18),
+                new HotStreakScoring(0.4, 0.3, 0.3), new FormClassifier(new HotStreakScoring(0.4, 0.3, 0.3), 0.15, 1, 18, 0.15),
                 SEASON, 15, 0.5);
 
         Map<String, PlayerForm> forms = service.formOfAllPlayers().stream()

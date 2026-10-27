@@ -122,6 +122,14 @@ class DemoRunner implements CommandLineRunner {
         byValue.stream().filter(f -> f.form() == FormClassifier.Form.EARLY_HOT).forEach(DemoRunner::printForm);
         System.out.println("  returning from a lost season:");
         byValue.stream().filter(f -> f.form() == FormClassifier.Form.RETURNING).forEach(DemoRunner::printForm);
+        System.out.println("  early cold, biggest drop first (minutes: recent vs. last season):");
+        forms.stream()
+                .filter(f -> f.form() == FormClassifier.Form.EARLY_COLD)
+                .sorted(Comparator.comparing(TrendService.PlayerForm::hotScore))
+                .forEach(f -> System.out.printf("    %-26s %-4s %2d games  min %4.1f vs %4.1f  pts %4.1f vs %4.1f  hot %+.3f%n",
+                        f.player().name(), f.player().team(), f.gamesThisSeason(),
+                        f.trend().recent().minutes(), f.trend().baseline().minutes(),
+                        f.trend().recent().points(), f.trend().baseline().points(), f.hotScore()));
         if (byValue.size() >= 150) {
             System.out.printf("  value of the 50th / 100th / 150th player: %.2f / %.2f / %.2f%n",
                     byValue.get(49).value(), byValue.get(99).value(), byValue.get(149).value());

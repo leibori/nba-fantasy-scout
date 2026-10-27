@@ -6,7 +6,7 @@ import java.util.OptionalDouble;
 /**
  * Turns "better than before?" (the trend's hot score) and "good right now?" (the value) into one label.
  * Early in a season (provisional trend, or no trend yet) a rise only counts when the player is also good,
- * and a drop only when he had a real role, so bench players moving a few minutes are not called hot or cold.
+ * and a drop only when he had a real role and lost minutes: minutes settle within a few games, shot volume does not.
  */
 public class FormClassifier {
 
@@ -19,12 +19,16 @@ public class FormClassifier {
     private final double hotThreshold;
     private final double highValue;
     private final double earlyColdMinMinutes;
+    private final double earlyColdMinMinutesDrop;
 
-    public FormClassifier(ScoringStrategy hotScoring, double hotThreshold, double highValue, double earlyColdMinMinutes) {
+    /** {@code earlyColdMinMinutesDrop} is a share: 0.15 = recent minutes at least 15% below the baseline. */
+    public FormClassifier(ScoringStrategy hotScoring, double hotThreshold, double highValue,
+                          double earlyColdMinMinutes, double earlyColdMinMinutesDrop) {
         this.hotScoring = hotScoring;
         this.hotThreshold = hotThreshold;
         this.highValue = highValue;
         this.earlyColdMinMinutes = earlyColdMinMinutes;
+        this.earlyColdMinMinutesDrop = earlyColdMinMinutesDrop;
     }
 
     /** {@code value} is this season's value, empty when the player has no games yet. */
@@ -48,9 +52,15 @@ public class FormClassifier {
         if (score >= hotThreshold && (!early || high)) {
             return early ? Form.EARLY_HOT : Form.HOT;
         }
-        if (score <= -hotThreshold && (!early || current.baseline().minutes() >= earlyColdMinMinutes)) {
+        if (score <= -hotThreshold && (!early || lostARealRole(current))) {
             return early ? Form.EARLY_COLD : Form.COLD;
         }
         return high ? Form.GOOD : Form.NEUTRAL;
+    }
+
+    private boolean lostARealRole(Trend trend) {
+        double baselineMinutes = trend.baseline().minutes();
+        return baselineMinutes >= earlyColdMinMinutes
+                && trend.recent().minutes() <= baselineMinutes * (1 - earlyColdMinMinutesDrop);
     }
 }
