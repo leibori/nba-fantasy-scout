@@ -21,7 +21,7 @@ scout:
     lookback-hours: 24
     limit: 25
   sync:
-    season: 2026               # year the season ends (2026 = 2025-26)
+    season: 2027               # year the season ends (2027 = 2026-27)
     max-consecutive-failures: 10
   matcher:
     min-confidence: 0.85       # below this a name match is "unsure"
