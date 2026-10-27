@@ -1,5 +1,6 @@
 package com.ori_leibo.nbafantasyscout.client;
 
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import org.slf4j.Logger;
@@ -28,7 +29,7 @@ public class SleeperMapper {
 
     /** Sleeper id -> full name. Entries without a full_name are teams (key "BKN" = Brooklyn Nets), not players. */
     public Map<String, String> playerNames(String playersJson) {
-        Map<String, String> names = new LinkedHashMap<>();
+        Map<String, String> names = new HashMap<>();
         for (Map.Entry<String, JsonNode> entry : JsonMapper.shared().readTree(playersJson).properties()) {
             String name = entry.getValue().path("full_name").asString("");
             if (!name.isBlank()) {
