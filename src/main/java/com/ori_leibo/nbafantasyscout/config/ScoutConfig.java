@@ -85,9 +85,10 @@ public class ScoutConfig {
     }
 
     @Bean
-    TrendService trendService(PlayerRepository players, GameLogRepository gameLogs, TrendCalculator trendCalculator,
-                              HotStreakScoring hotStreakScoring, FormClassifier formClassifier, ScoutProperties properties) {
-        return new TrendService(players, gameLogs, trendCalculator, hotStreakScoring, formClassifier,
+    TrendService trendService(PlayerRepository players, GameLogRepository gameLogs, TrendingSnapshotRepository snapshots,
+                              TrendCalculator trendCalculator, HotStreakScoring hotStreakScoring,
+                              FormClassifier formClassifier, ScoutProperties properties) {
+        return new TrendService(players, gameLogs, snapshots, trendCalculator, hotStreakScoring, formClassifier,
                 properties.sync().season(), properties.trend().leagueMinMinutes(), properties.trend().percentageWeight());
     }
 }

@@ -130,6 +130,13 @@ class DemoRunner implements CommandLineRunner {
                         f.player().name(), f.player().team(), f.gamesThisSeason(),
                         f.trend().recent().minutes(), f.trend().baseline().minutes(),
                         f.trend().recent().points(), f.trend().baseline().points(), f.hotScore()));
+        System.out.println("  crowd signals (latest Sleeper snapshot vs. form): " + forms.stream()
+                .collect(Collectors.groupingBy(TrendService.PlayerForm::crowdSignal, TreeMap::new, Collectors.counting())));
+        forms.stream()
+                .filter(f -> f.crowd() != null)
+                .sorted(Comparator.comparing((TrendService.PlayerForm f) -> f.crowd().count()).reversed())
+                .forEach(f -> System.out.printf("    %-26s %-4s %5d %-4s  %-10s -> %s%n", f.player().name(), f.player().team(),
+                        f.crowd().count(), f.crowd().type(), f.form(), f.crowdSignal()));
         if (byValue.size() >= 150) {
             System.out.printf("  value of the 50th / 100th / 150th player: %.2f / %.2f / %.2f%n",
                     byValue.get(49).value(), byValue.get(99).value(), byValue.get(149).value());

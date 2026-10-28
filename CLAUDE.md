@@ -70,6 +70,7 @@ Controllers never touch repositories. APIs return DTO records, never JPA entitie
 - Crowd cross-check: `CrowdSignal` classifies (crowd direction from Sleeper adds/drops, model direction from trend), both ways:
   - adds + breakout = confirmed breakout; adds + nothing = hype; no adds + breakout = early pickup
   - drops + decline = confirmed decline; drops + stats fine = panic drop (hold / buy low); no drops + decline = early warning
+  - up = HOT / EARLY_HOT / RETURNING, down = COLD / EARLY_COLD; GOOD + adds = no signal (adding a good player is sensible), NEUTRAL + drops = no signal (dropping a bench player is not panic); only the latest sync's snapshot counts
   - Crowd data is evidence shown to the user, never part of the score; early in the season it flags early-hot players as confirmed (heavy adds) or early pickup (no adds)
 - Injury and crowd rules in the `RosterRule` chain: never suggest an `Out`/`IR` free agent as replacement; a heavily dropped player on the user's roster is judged by injury status first (injured = by injury length, healthy + decline = drop, healthy + fine = keep)
 - `SyncService` publishes `SyncCompletedEvent` (Observer); a listener recomputes trends, cross-checks them with the latest trending snapshot, and evicts the cache

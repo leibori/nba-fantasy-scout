@@ -42,7 +42,8 @@ and 3 print `[SKIP]`.
 
 ### 4. Form of every rostered player (`TrendService`)
 Prints the count per form (e.g. `{EARLY_HOT=21, RETURNING=4, GOOD=70, NEUTRAL=376, EARLY_COLD=47}`), the top 10 by
-value, every EARLY_HOT and RETURNING player, every EARLY_COLD player with recent vs. baseline minutes, and the value of the 50th / 100th / 150th player (used to set
+value, every EARLY_HOT and RETURNING player, every EARLY_COLD player with recent vs. baseline minutes, the crowd signal of every player in the latest Sleeper
+snapshot (e.g. Ja'Kobe Walter: 82600 ADD, EARLY_HOT -> CONFIRMED_BREAKOUT), and the value of the 50th / 100th / 150th player (used to set
 `scout.trend.high-value`).
 
 | Check | Proves |

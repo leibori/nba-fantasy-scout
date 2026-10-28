@@ -3,10 +3,13 @@ package com.ori_leibo.nbafantasyscout.recommend;
 import com.ori_leibo.nbafantasyscout.domain.GameLog;
 import com.ori_leibo.nbafantasyscout.domain.Player;
 import com.ori_leibo.nbafantasyscout.domain.StatLine;
+import com.ori_leibo.nbafantasyscout.domain.TrendingSnapshot;
 import com.ori_leibo.nbafantasyscout.persistence.GameLogEntity;
 import com.ori_leibo.nbafantasyscout.persistence.GameLogRepository;
 import com.ori_leibo.nbafantasyscout.persistence.PlayerEntity;
 import com.ori_leibo.nbafantasyscout.persistence.PlayerRepository;
+import com.ori_leibo.nbafantasyscout.persistence.TrendingSnapshotEntity;
+import com.ori_leibo.nbafantasyscout.persistence.TrendingSnapshotRepository;
 import com.ori_leibo.nbafantasyscout.trend.FormClassifier;
 import com.ori_leibo.nbafantasyscout.trend.ScoringStrategy;
 import com.ori_leibo.nbafantasyscout.trend.Trend;
@@ -22,13 +25,17 @@ import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-/** Loads stored players and games and runs the pure trend logic on them: trend, hot score, value and form. */
+/**
+ * Loads stored players, games and the latest Sleeper snapshot, and runs the pure logic on them:
+ * trend, hot score, value, form, and the crowd signal next to it.
+ */
 public class TrendService {
 
     private static final Logger log = LoggerFactory.getLogger(TrendService.class);
 
     private final PlayerRepository players;
     private final GameLogRepository gameLogs;
+    private final TrendingSnapshotRepository snapshots;
     private final TrendCalculator calculator;
     private final ScoringStrategy hotScoring;
     private final FormClassifier classifier;
@@ -36,11 +43,12 @@ public class TrendService {
     private final double leagueMinMinutes;
     private final double percentageWeight;
 
-    public TrendService(PlayerRepository players, GameLogRepository gameLogs, TrendCalculator calculator,
-                        ScoringStrategy hotScoring, FormClassifier classifier, int season,
+    public TrendService(PlayerRepository players, GameLogRepository gameLogs, TrendingSnapshotRepository snapshots,
+                        TrendCalculator calculator, ScoringStrategy hotScoring, FormClassifier classifier, int season,
                         double leagueMinMinutes, double percentageWeight) {
         this.players = players;
         this.gameLogs = gameLogs;
+        this.snapshots = snapshots;
         this.calculator = calculator;
         this.hotScoring = hotScoring;
         this.classifier = classifier;
@@ -51,10 +59,11 @@ public class TrendService {
 
     /**
      * One player's form. {@code trend} and {@code hotScore} are null when there is no trend yet;
-     * {@code value} is null when the player has no games this season.
+     * {@code value} is null when the player has no games this season; {@code crowd} is his row in the latest
+     * Sleeper trending lists, null when he is in neither.
      */
     public record PlayerForm(Player player, int gamesThisSeason, Trend trend, Double hotScore, Double value,
-                             FormClassifier.Form form) {
+                             FormClassifier.Form form, TrendingSnapshot crowd, CrowdSignal crowdSignal) {
     }
 
     /** Every player on a roster, in no particular order. */
@@ -88,6 +97,7 @@ public class TrendService {
         Optional<ValueScoring> valueScoring = league.isEmpty()
                 ? Optional.empty()
                 : Optional.of(new ValueScoring(league, percentageWeight));
+        Map<Long, TrendingSnapshot> crowdByPlayer = latestCrowd();
 
         List<PlayerForm> forms = new ArrayList<>();
         for (Player player : roster) {
@@ -97,14 +107,33 @@ public class TrendService {
             OptionalDouble value = line == null || valueScoring.isEmpty()
                     ? OptionalDouble.empty()
                     : OptionalDouble.of(valueScoring.get().score(line));
+            FormClassifier.Form form = classifier.classify(trend, value, history(player, last));
+            TrendingSnapshot crowd = crowdByPlayer.get(player.id());
             forms.add(new PlayerForm(player, thisSeason.get(player.id()).size(), trend.orElse(null),
                     trend.map(hotScoring::score).orElse(null),
                     value.isPresent() ? value.getAsDouble() : null,
-                    classifier.classify(trend, value, history(player, last))));
+                    form, crowd, CrowdSignal.of(form, crowd(crowd))));
         }
         log.info("Computed form of {} players against a value league of {} in {} ms",
                 forms.size(), league.size(), (System.nanoTime() - start) / 1_000_000);
         return forms;
+    }
+
+    // a player in both lists (rare) is judged by the bigger count
+    private Map<Long, TrendingSnapshot> latestCrowd() {
+        return snapshots.findFirstByOrderByFetchedAtDesc()
+                .map(latest -> snapshots.findByFetchedAt(latest.toSnapshot().fetchedAt()).stream()
+                        .map(TrendingSnapshotEntity::toSnapshot)
+                        .collect(Collectors.toMap(TrendingSnapshot::playerId, snapshot -> snapshot,
+                                (a, b) -> a.count() >= b.count() ? a : b)))
+                .orElse(Map.of());
+    }
+
+    private static CrowdSignal.Crowd crowd(TrendingSnapshot snapshot) {
+        if (snapshot == null) {
+            return CrowdSignal.Crowd.QUIET;
+        }
+        return snapshot.type() == TrendingSnapshot.Type.ADD ? CrowdSignal.Crowd.ADDS : CrowdSignal.Crowd.DROPS;
     }
 
     // no games last season: a rookie by ESPN's experience count (0), otherwise back from a lost season
