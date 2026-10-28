@@ -29,7 +29,7 @@ Purpose: CV project for a mid-level Java backend role. Focus on Java: a testable
 - Start DB: `docker compose up -d`; reset: `docker compose down -v`
 - `src/main/resources/application.yml`: datasource `jdbc:postgresql://localhost:5432/scout`, `ddl-auto: validate`
 - Run: `./gradlew bootRun`; tests: `./gradlew test`
-- Demo (manual end-to-end check, real ESPN + dev DB, prints OK/FAIL): `demo/DemoRunner`, only active with the `demo` profile. Needs `docker compose up -d`. Git Bash: `JAVA_TOOL_OPTIONS="-Djavax.net.ssl.trustStoreType=Windows-ROOT" ./gradlew bootRun --args="--spring.profiles.active=demo --spring.main.web-application-type=none"` (the trust store option is only needed on this machine's HTTPS inspection). Keep it updated as features land.
+- Demo (manual end-to-end check, real ESPN + dev DB, prints OK/FAIL): `demo/DemoRunner`, only active with the `demo` profile. Needs `docker compose up -d`. Git Bash: `JAVA_TOOL_OPTIONS="-Djavax.net.ssl.trustStoreType=Windows-ROOT" ./gradlew bootRun --args="--spring.profiles.active=demo --spring.main.web-application-type=none"` (the trust store option is only needed on this machine's HTTPS inspection; Gradle needs it too, once, when it downloads a new dependency). Keep it updated as features land.
 - Spring Initializr generated test helpers (`TestcontainersConfiguration`, `Test...Application`); keep them for the Testcontainers step
 
 ## Architecture
@@ -95,9 +95,9 @@ Controllers never touch repositories. APIs return DTO records, never JPA entitie
 
 ## Endpoints
 - `POST /api/v1/sync/daily`: returns 202 + job id; also `GET /api/v1/sync/jobs/{jobId}` and a `@Scheduled` trigger
-- `GET /api/v1/recommendations/hot?limit=10`: top by hot score
-- `GET /api/v1/recommendations/{category}`
-- `GET /api/v1/players/{id}/trend`
+- `GET /api/v1/recommendations/hot?limit=10`: rising players (HOT / EARLY_HOT / RETURNING), best value first (rookies have no hot score, every rising player has a value)
+- `GET /api/v1/recommendations/{category}`: biggest change vs. baseline in one Yahoo category (case-insensitive; unknown = 400)
+- `GET /api/v1/players/{id}/trend`: one player by ESPN id (unknown = 404); errors are RFC 9457 `ProblemDetail` JSON
 - `POST /api/v1/roster`: list of player names, returns keep / watch / drop + best replacement
 - `POST /api/v1/roster/from-image`: `MultipartFile[]` screenshots, extracts names, returns detected players with confidence for user review, then recommendations
 
@@ -110,7 +110,7 @@ Controllers never touch repositories. APIs return DTO records, never JPA entitie
 - Decision rule: keep = high hot score; drop = low score and a free agent clearly higher; otherwise watch; thresholds in config
 
 ## UI
-- Swagger UI (springdoc), added with the first controller
+- Swagger UI (springdoc 3.1.1, the Spring Boot 4 line) at `/swagger-ui.html`, added with the first controller
 - One static HTML page in `src/main/resources/static/` with vanilla JS: hot list table, category dropdown, screenshot upload, editable detected names, results table
 - Optional: daily top-10 push to Telegram/email
 

@@ -10,6 +10,7 @@ import com.ori_leibo.nbafantasyscout.persistence.GameLogRepository;
 import com.ori_leibo.nbafantasyscout.persistence.GameLogUpsert;
 import com.ori_leibo.nbafantasyscout.persistence.PlayerRepository;
 import com.ori_leibo.nbafantasyscout.persistence.TrendingSnapshotRepository;
+import com.ori_leibo.nbafantasyscout.recommend.RecommendationService;
 import com.ori_leibo.nbafantasyscout.recommend.TrendService;
 import com.ori_leibo.nbafantasyscout.roster.PlayerMatcher;
 import com.ori_leibo.nbafantasyscout.sync.SyncService;
@@ -90,5 +91,10 @@ public class ScoutConfig {
                               FormClassifier formClassifier, ScoutProperties properties) {
         return new TrendService(players, gameLogs, snapshots, trendCalculator, hotStreakScoring, formClassifier,
                 properties.sync().season(), properties.trend().leagueMinMinutes(), properties.trend().percentageWeight());
+    }
+
+    @Bean
+    RecommendationService recommendationService(TrendService trendService) {
+        return new RecommendationService(trendService);
     }
 }
