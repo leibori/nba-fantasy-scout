@@ -43,7 +43,7 @@ public class SyncService {
     private final Clock clock;
     private final int season;
     private final int maxConsecutiveFailures;
-    // shortcut: a plain callback (clears the trend cache); becomes the SyncCompletedEvent in step 8
+    // clears the trend cache for now; TODO: publish a SyncCompletedEvent instead once the sync runs async
     private final Runnable onFinished;
 
     public SyncService(NbaDataClient nba, SleeperClient sleeper, PlayerMatcher matcher, PlayerRepository players,
@@ -87,7 +87,7 @@ public class SyncService {
 
         List<Player> roster = syncPlayers();
         int lastSeason = season - 1;
-        // shortcut: players with no games last season (rookies) are asked again every sync, ~80 calls;
+        // TODO: players with no games last season (rookies) are asked again every sync, ~80 calls;
         // remember "checked" players if that ever matters
         Set<Long> haveLastSeason = gameLogs.findPlayerIdsWithGamesBetween(
                 GameLog.seasonStart(lastSeason), GameLog.seasonEnd(lastSeason));

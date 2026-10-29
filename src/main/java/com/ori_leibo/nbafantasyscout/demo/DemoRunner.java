@@ -29,7 +29,7 @@ import org.springframework.stereotype.Component;
 /**
  * Manual end-to-end check against the real ESPN and Sleeper APIs and the dev Postgres:
  * the wired SyncService fills the DB, then the data flows into TrendCalculator.
- * Runs only with the "demo" profile; see CLAUDE.md "Local setup" for the command.
+ * Runs only with the "demo" profile; see README.md in this package for the command.
  * Prints to the console on purpose: it is a report for a human, not application logging.
  */
 @Component

@@ -1,96 +1,47 @@
 # Demo runner
 
-`DemoRunner` is a manual end-to-end check against the **real ESPN and Sleeper APIs** and the **dev Postgres**:
-the wired `SyncService` fills the database, then the data flows into `TrendCalculator`. It prints an
-`[OK]` / `[FAIL]` line per check and ends with `DEMO PASSED` or `DEMO FAILED: N check(s)`.
+`DemoRunner` is my manual end-to-end check. It runs the real sync against ESPN and Sleeper into the dev database, then
+pushes that data through the trend logic and prints a report with an `[OK]` / `[FAIL]` line per check. It ends with
+`DEMO PASSED` or `DEMO FAILED: N check(s)`.
 
-It runs only with the `demo` profile, so it never runs on a normal start or in the tests.
-A full run takes about 2.5 minutes: the sync fetches every rostered player's season, one call at a time.
+It only runs with the `demo` profile, so it never kicks in on a normal start or during tests.
 
-## What it checks
+## Running it
 
-### 1. Daily sync: ESPN players + game logs, Sleeper trending → DB
-Prints the sync summary, e.g. `518 players, 0 game logs new or changed, last season fetched for 80, 0 failed players,
-49 snapshots, took 120 s`. The time is the single-threaded baseline to compare with the concurrent sync (step 8).
-On an empty database the first sync also fetches last season for every player (about 250 s); later syncs only
-re-ask the players who have no last-season games (rookies), about 80.
-
-| Check | Proves |
-|---|---|
-| `ESPN returned 30 teams' worth of players (518)` | ESPN roster client and parser work; fails below 400 players |
-| `players table holds them (518)` | Players were saved to Postgres |
-| `some players have an injury status` | Injury status parsing works |
-| `no player's game logs failed` | Every player's game log parsed (rookies and players out all season return no games, not an error) |
-| `game_logs holds games for the roster (23569)` | Game logs were stored; fails at one game per player or fewer, so it also holds early in a season |
-| `Sleeper trending stored as snapshots (49, 98 in total)` | Sleeper adds/drops were matched to ESPN players and appended to `trending_snapshots` |
-
-On an already filled database "game logs new or changed" is 0: the upsert only writes real changes.
-Sleeper names with no sure ESPN match (e.g. a free agent) are logged as WARN and skipped.
-
-### 2. Upsert one player's season again
-| Check | Proves |
-|---|---|
-| `Luka Doncic: second upsert changed nothing (ON CONFLICT)` | Re-running adds no duplicates and rewrites nothing unchanged (`GameLogUpsert`) |
-
-### 3. DB → `TrendCalculator` → `HotStreakScoring`
-| Check | Proves |
-|---|---|
-| `trend computed from 3 games this season, 64 last season` | Data read back from Postgres flows into the trend logic; early in a season the baseline is last season (printed as `LAST_SEASON, provisional`) |
-
-It also prints the recent and baseline averages and the hot score. If Luka Doncic is not stored, sections 2
-and 3 print `[SKIP]`.
-
-### 4. Form of every rostered player (`TrendService`)
-Prints the count per form (e.g. `{EARLY_HOT=21, RETURNING=4, GOOD=70, NEUTRAL=376, EARLY_COLD=47}`), the top 10 by
-value, every EARLY_HOT and RETURNING player, every EARLY_COLD player with recent vs. baseline minutes, the crowd signal of every player in the latest Sleeper
-snapshot (e.g. Ja'Kobe Walter: 82600 ADD, EARLY_HOT -> CONFIRMED_BREAKOUT), and the value of the 50th / 100th / 150th player (used to set
-`scout.trend.high-value`).
-
-| Check | Proves |
-|---|---|
-| `every rostered player has a form (518)` | Every player with a team gets trend, value and form |
-| `players with games this season have a value (408)` | The value league was built and scored |
-
-## How to run it
-
-**1. Start the dev DB** (once per boot):
 ```
 docker compose up -d
+./gradlew bootRun --args="--spring.profiles.active=demo --spring.main.web-application-type=none"
 ```
 
-**2. Run the demo**
+`web-application-type=none` skips the web server, so the app exits when the report is done. In IntelliJ: set the active
+profile to `demo` and add the same program argument.
 
-Git Bash:
-```
-JAVA_TOOL_OPTIONS="-Djavax.net.ssl.trustStoreType=Windows-ROOT" ./gradlew bootRun --args="--spring.profiles.active=demo --spring.main.web-application-type=none"
-```
+A full run takes 2-3 minutes because the sync fetches every player's games one call at a time. On an empty database the
+first run also pulls last season for everyone, so it takes about twice as long.
 
-PowerShell:
-```powershell
-$env:JAVA_TOOL_OPTIONS="-Djavax.net.ssl.trustStoreType=Windows-ROOT"; ./gradlew bootRun --args="--spring.profiles.active=demo --spring.main.web-application-type=none"
-```
+> If ESPN calls fail with `PKIX path building failed`, something on the machine (antivirus, corporate proxy) is
+> inspecting HTTPS. Add `-Djavax.net.ssl.trustStoreType=Windows-ROOT` to the JVM options to use the Windows
+> certificate store.
 
-- `--spring.profiles.active=demo` switches the demo on.
-- `--spring.main.web-application-type=none` skips the web server, so the app exits when the demo is done.
-- `JAVA_TOOL_OPTIONS=...Windows-ROOT` makes Java trust the Windows certificate store. Only needed on a machine
-  whose antivirus or proxy inspects HTTPS (otherwise ESPN calls fail with `PKIX path building failed`).
+## What it does
 
-IntelliJ: in the run configuration of `NbaFantasyScoutApplication` set
-- Active profiles: `demo`
-- VM options: `-Djavax.net.ssl.trustStoreType=Windows-ROOT`
-- Program arguments: `--spring.main.web-application-type=none`
+1. **Sync.** Runs the daily sync and prints the summary, e.g.
+   `518 players, 0 game logs new or changed, last season fetched for 80, 0 failed players, 49 snapshots, took 120 s`.
+   Then checks that ESPN returned a full league (400+ players), that injury statuses came through, that no player
+   failed, and that Sleeper trending rows were matched and stored.
+2. **Upsert again.** Re-saves Luka Doncic's season and checks that nothing changed. If the upsert ever starts
+   rewriting unchanged rows, this fails.
+3. **Trend for one player.** Reads his games back from Postgres and runs `TrendCalculator` and `HotStreakScoring` on
+   them. Early in a season the baseline is last season, printed as `LAST_SEASON, provisional`.
+4. **Everyone.** Runs `TrendService` for all rostered players and prints the count per form, the top 10 by value,
+   all `EARLY_HOT` / `RETURNING` / `EARLY_COLD` players, the crowd signal for everyone in the latest Sleeper snapshot,
+   and the value of the 50th, 100th and 150th player. I used those last numbers to pick `scout.trend.high-value`.
 
-**3. Read the result.** Spring's log lines appear around the report; the demo lines start with `===` and
-`[OK]` / `[FAIL]`.
-
-**4. Optional: look at the data yourself**
-```
-docker compose exec postgres psql -U scout -d scout -c "SELECT count(*) FROM game_logs;"
-```
+On a database that's already filled, "game logs new or changed" should be 0 unless ESPN posted new games or stat
+corrections. Sleeper names without a confident ESPN match (usually free agents) are logged as WARN and skipped.
 
 ## Notes
-- It writes to the **dev** database (players, game logs, snapshots), never the test database. Reset with
-  `docker compose down -v`.
-- It works on an empty or an already filled database.
-- Each run appends a new set of Sleeper snapshots (that is the history).
-- Keep it updated as features land: recommendations and crowd signals (step 6).
+
+- It writes to the dev database, never the test one. `docker compose down -v` resets it.
+- Every run appends a new batch of Sleeper snapshots on purpose: that's the history.
+- To poke at the data: `docker compose exec postgres psql -U scout -d scout -c "SELECT count(*) FROM game_logs;"`

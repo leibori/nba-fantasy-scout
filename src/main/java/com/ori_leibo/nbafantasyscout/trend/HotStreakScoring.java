@@ -32,7 +32,7 @@ public class HotStreakScoring implements ScoringStrategy {
                 : (line.fieldGoalsAttempted() + line.freeThrowsAttempted() + line.turnovers()) / line.minutes();
     }
 
-    // shortcut: a zero baseline counts as no change, so a jump from 0 is ignored; revisit if real data shows such players
+    // TODO: a zero baseline counts as no change, so a jump from 0 is ignored; revisit if real data shows such players
     private static double relativeChange(double recent, double baseline) {
         return baseline == 0 ? 0 : (recent - baseline) / baseline;
     }

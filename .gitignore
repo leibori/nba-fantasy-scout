@@ -43,3 +43,6 @@ logs/
 .claude/
 .postman/
 postman/
+CLAUDE.md
+AGENTS.md
+.agents/

@@ -57,7 +57,7 @@ public class SleeperClient {
         return counts;
     }
 
-    // shortcut: same get/send as EspnNbaDataClient; move both into one shared HTTP helper when Resilience4j lands (step 8)
+    // TODO: same get/send as EspnNbaDataClient; pull both into one HTTP helper when retries and rate limiting go in
     private String get(String url) {
         URI uri = URI.create(url);
         HttpResponse<String> response = send(HttpRequest.newBuilder(uri).timeout(timeout).GET().build());

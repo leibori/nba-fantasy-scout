@@ -1,32 +1,28 @@
 # nba-fantasy-scout
 
-![Java 21](https://img.shields.io/badge/Java-21-orange)
-![Spring Boot 4.1](https://img.shields.io/badge/Spring%20Boot-4.1-6DB33F)
-![PostgreSQL 16](https://img.shields.io/badge/PostgreSQL-16-336791)
-![Testcontainers](https://img.shields.io/badge/tests-JUnit%205%20%7C%20Mockito%20%7C%20Testcontainers-blue)
+A Spring Boot backend that looks for NBA players who are breaking out (or falling off) for fantasy basketball.
+It pulls real box scores every day, works out who's trending, and serves it over a REST API.
 
-A Spring Boot backend that finds **breakout and declining NBA players** for fantasy basketball. Every day it ingests real
-box scores and crowd activity, runs the analytics in plain Java, and serves rankings through a REST API.
+**Work in progress.** Ingestion, the analytics, the API and caching all work on live 2026-27 data. Next up is making
+the sync concurrent, then keep/drop advice for your own roster. See [what's next](#whats-next).
 
-> **Status: work in progress.** Ingestion, analytics, the REST API and caching run on real 2026-27 season data.
-> Concurrent ingestion and keep / watch / drop advice for your own roster are next (see the [roadmap](#roadmap)).
+## The idea
 
----
+In fantasy basketball the free pickups that matter are players whose role just grew: more minutes, more shots. The
+trick is telling that apart from three lucky games. So the service asks two separate questions about every player:
 
-## What it answers
+- **Is he better than before?** Compare his last 3 games with his earlier games. This gives a *hot score* built from
+  minutes, shot attempts and usage, not shooting percentage, which is mostly noise over a few games.
+- **Is he good right now?** Compare his season averages with the rest of the league in the 9 Yahoo fantasy categories
+  (z-scores). This gives a *value*.
 
-Fantasy managers win by spotting a player whose **role** is growing before everyone else does. The hard part is telling
-a real change (more minutes, more shots) from a few lucky games. The service answers two separate questions:
+I ended up needing both because one number couldn't cover the obvious cases: a veteran playing exactly like last year
+is good but not "hot", and a rookie has no "before" at all. The two numbers are combined into a label (`HOT`,
+`EARLY_HOT`, `RETURNING`, `GOOD`, `NEUTRAL`, `EARLY_COLD`, `COLD`) and then compared with what people are actually
+adding and dropping on Sleeper, so you can see "the model likes him and nobody has noticed yet" vs. "everyone is
+already adding him".
 
-| Question | Number | How |
-|---|---|---|
-| Is he **better than before**? | **hot score** | last 3 games vs. a baseline of earlier games; weighs minutes, shot attempts and usage, not lucky shooting |
-| Is he **good right now**? | **value** | z-scores in the 9 Yahoo fantasy categories against the whole league |
-
-The two numbers become one **form** label (`HOT`, `EARLY_HOT`, `RETURNING`, `GOOD`, `NEUTRAL`, `EARLY_COLD`, `COLD`), which
-is then cross-checked with what thousands of fantasy players are adding and dropping (Sleeper trending data).
-
-A real response, four games into the 2026-27 season (`GET /api/v1/recommendations/hot`, trimmed):
+Here's a real response from four games into the season (`GET /api/v1/recommendations/hot`, trimmed):
 
 ```json
 {
@@ -44,97 +40,46 @@ A real response, four games into the 2026-27 season (`GET /api/v1/recommendation
 }
 ```
 
-Four games are too few for a baseline from this season, so the trend is measured against last season and marked
-`provisional`. A rookie like Cameron Boozer has no "before" at all: he gets no hot score, but his value is high enough
-to be flagged `EARLY_HOT` anyway.
+Four games isn't enough for a baseline from this season, so it's compared with last season and flagged `provisional`.
 
-## Engineering highlights
+## How it's put together
 
-- **Idempotent ingestion.** One batch upsert per player (`INSERT ... ON CONFLICT DO UPDATE ... WHERE ... IS DISTINCT FROM`):
-  new games are inserted, stat corrections applied, unchanged rows never rewritten. Upserting an unchanged season again
-  changes 0 rows.
-- **Failure containment.** Two unofficial external APIs, so failures are expected and graded: a bad row is skipped, a failed
-  player is skipped, 10 failures in a row abort the sync, an empty roster response is refused instead of wiping data,
-  and an outage of the secondary source never fails the sync.
-- **Framework-free domain.** Records and enums with no Spring or JPA: `TrendCalculator`, a `ScoringStrategy` interface with
-  interchangeable scorers (Strategy pattern), a z-score `ValueScoring`, a `FormClassifier`. Unit tests run in milliseconds.
-- **Real-data calibration.** Thresholds were tuned against live data, not guessed (for example, early-season "cold"
-  flags went from 74 players to 47 after two minutes-based rules).
-- **Cache-aside with Caffeine.** Recommendations went from ~350 ms to ~35 ms per request; the cache is cleared after every
-  sync, including an aborted one (see [lessons](#engineering-decisions-and-lessons)).
-- **Clean API.** DTO records (never JPA entities), Bean Validation, RFC 9457 `ProblemDetail` errors, OpenAPI / Swagger UI.
-- **Tests against a real database.** Testcontainers runs PostgreSQL 16, because the upsert is Postgres-specific SQL that an
-  in-memory database would not run.
-
-## How it works
-
-```mermaid
-flowchart LR
-    subgraph write["Daily sync (write side)"]
-        ESPN["ESPN API<br/>rosters, injuries, box scores"] --> SYNC[SyncService]
-        SLEEPER["Sleeper API<br/>trending adds / drops"] --> SYNC
-        SYNC -->|"batch upsert<br/>ON CONFLICT"| DB[(PostgreSQL)]
-    end
-    subgraph read["Request (read side)"]
-        API["REST controllers"] --> REC[RecommendationService]
-        REC --> TS["TrendService<br/>(cached, Caffeine)"]
-        TS --> LOGIC["TrendCalculator · HotStreakScoring<br/>ValueScoring · FormClassifier · CrowdSignal"]
-    end
-    DB --> TS
-    SYNC -. "clears cache" .-> TS
+```
+  ESPN (rosters, box scores) ──┐
+                               ├──> SyncService ──upsert──> PostgreSQL
+  Sleeper (adds / drops) ──────┘         │                      │
+                                         │ clears cache         │
+                                         v                      v
+  REST controllers ──> RecommendationService ──> TrendService (cached) ──> trend / scoring classes
 ```
 
-Writes and reads are separated: requests never call the external APIs, so a slow or broken source cannot slow down a user.
-The sync stores only raw counting stats; every average, percentage and score is computed in Java.
+The sync and the API are separate on purpose: requests never call ESPN or Sleeper, so a slow or broken source can't slow
+down a request. The database only stores raw counting stats; every average, percentage and score is computed in Java.
 
-## Architecture
+Packages, roughly bottom to top:
 
-Layered, package-by-feature. Each layer only calls the layer below it; controllers never touch repositories.
-
-```mermaid
-flowchart TB
-    api["api<br/>controllers · DTO records · error handler"]
-    recommend["recommend<br/>TrendService · RecommendationService · CrowdSignal"]
-    sync["sync<br/>SyncService"]
-    trend["trend<br/>pure-Java analytics"]
-    persistence["persistence<br/>entities · repositories · upsert"]
-    client["client<br/>ESPN + Sleeper adapters"]
-    roster["roster<br/>PlayerMatcher"]
-    domain["domain<br/>Player · GameLog · StatLine · StatCategory"]
-    api --> recommend
-    recommend --> trend
-    recommend --> persistence
-    sync --> client
-    sync --> persistence
-    sync --> roster
-    trend --> domain
-    persistence --> domain
-    client --> domain
-```
-
-| Package | Responsibility |
-|---|---|
-| `domain` | Immutable records and enums, no framework code |
-| `trend` | Rolling trend, hot score (Strategy pattern), value z-scores, form classification |
-| `client` | `NbaDataClient` interface with an ESPN **adapter**; Sleeper client; JSON mappers tested on saved real responses |
-| `roster` | `PlayerMatcher`: matches names across sources that share no id (Unicode normalization + own Levenshtein implementation) |
-| `persistence` | JPA entities kept separate from domain records, Spring Data repositories, the JDBC batch upsert |
-| `sync` | Daily ingestion with failure containment |
-| `recommend` | Loads the data once, runs the analytics, ranks players |
-| `api` | REST controllers, DTOs, RFC 9457 errors |
-| `config` | Plain-Java services wired with `@Bean` methods; typed `@ConfigurationProperties` records |
+- `domain`: plain records and enums (`Player`, `GameLog`, `StatLine`, `StatCategory`). No Spring, no JPA.
+- `trend`: the analytics. `TrendCalculator`, a `ScoringStrategy` interface with `HotStreakScoring` and
+  `CategoryScoring`, `ValueScoring` (z-scores) and `FormClassifier`. All plain Java, so the tests run in milliseconds.
+- `client`: ESPN and Sleeper. The rest of the app only sees an `NbaDataClient` interface, and the JSON parsing lives in
+  separate mappers that are tested on saved real responses.
+- `roster`: `PlayerMatcher`, because Sleeper doesn't share ESPN's player ids. It normalizes names (accents, "Jr.",
+  initials) and uses my own Levenshtein implementation; weak or tied matches are skipped.
+- `persistence`: JPA entities (kept separate from the domain records), Spring Data repositories and one hand-written
+  upsert in `JdbcTemplate`.
+- `sync`, `recommend`, `api`: the daily ingestion, the ranking logic and the controllers.
+- `config`: the services are plain classes wired with `@Bean` methods; settings come from a typed
+  `@ConfigurationProperties` record, so every threshold and weight lives in `application.yml`.
 
 ## API
 
-| Method | Path | Returns |
-|---|---|---|
-| `GET` | `/api/v1/recommendations/hot?limit=10` | Rising players (`HOT`, `EARLY_HOT`, `RETURNING`), best value first |
-| `GET` | `/api/v1/recommendations/{category}?limit=10` | Biggest improvement in one category (`pts`, `reb`, `ast`, `stl`, `blk`, `threes`, `to`, `fg_pct`, `ft_pct`), case-insensitive |
-| `GET` | `/api/v1/players/{id}/trend` | One player by ESPN id |
+| | |
+|---|---|
+| `GET /api/v1/recommendations/hot?limit=10` | Rising players, best value first |
+| `GET /api/v1/recommendations/{category}?limit=10` | Biggest improvement in one category (`pts`, `reb`, `ast`, `stl`, `blk`, `threes`, `to`, `fg_pct`, `ft_pct`) |
+| `GET /api/v1/players/{id}/trend` | One player by ESPN id |
 
-Interactive docs: **`/swagger-ui.html`** · OpenAPI JSON: `/v3/api-docs`
-
-Errors use [RFC 9457](https://www.rfc-editor.org/rfc/rfc9457) problem details:
+Swagger UI is at `/swagger-ui.html`. Errors come back as RFC 9457 problem details:
 
 ```json
 {
@@ -145,87 +90,81 @@ Errors use [RFC 9457](https://www.rfc-editor.org/rfc/rfc9457) problem details:
 }
 ```
 
-## Engineering decisions and lessons
+## Things that were harder than expected
 
-**Two questions need two numbers.** One score cannot say both "better than before" and "good right now": a veteran playing
-exactly like last year is good but not hot, and a rookie has no "before". Keeping trend and value separate made both honest.
+**Re-running the sync safely.** The sync re-downloads whole seasons every day, so most games are already stored. It's
+one batch per player with `INSERT ... ON CONFLICT (player_id, game_date) DO UPDATE ... WHERE (...) IS DISTINCT FROM (...)`:
+new games get inserted, ESPN's stat corrections get applied, and unchanged rows aren't touched at all.
 
-**The early season.** After three games there is nothing to compare with. The trend falls back to last season's games and
-says so (`provisional`); rookies are judged on value alone; players back from a lost season are labelled `RETURNING`
-(using ESPN's experience count, added in a Flyway migration); and an early decline only counts when a player with a real
-role (18+ minutes) lost at least 15% of his minutes, because minutes settle within a few games and shot volume does not.
+**The All-Star game.** After that was in place, a second sync of an unchanged day still rewrote 61 rows. Turns out ESPN
+lists the All-Star games under "Regular Season", up to three on the same date, and they kept overwriting each other
+under the `(player_id, game_date)` key. They don't count in fantasy anyway, so the mapper now drops them, along with
+the Play-In and the NBA Cup final.
 
-**Idempotency checks find real bugs.** The second sync of an unchanged day still rewrote 61 rows. ESPN files the All-Star
-games under "Regular Season", up to three of them on one date, and they kept overwriting each other under the
-`(player_id, game_date)` key. They don't count in fantasy leagues anyway, so the mapper now filters them out (along with
-the Play-In and the NBA Cup final).
+**External APIs fail.** Both sources are free and unofficial, so I treat failures as normal. A bad row gets skipped,
+a player whose request fails gets skipped, 10 failures in a row stop the sync (the source is clearly down), an empty
+roster response is refused instead of marking every player as gone, and if Sleeper is down the sync just finishes
+without crowd data. There's deliberately no transaction around the whole sync: if it dies at player 400, the first 399
+are kept and the next run fills in the rest.
 
-**`@CacheEvict` is skipped when the method throws.** The cache was first cleared with `@CacheEvict` on the sync. A test of
-the failure path showed the gap: an aborted sync has already saved new data, but the exception skips the eviction, so the
-API would serve stale results for up to a day. `beforeInvocation = true` is not a fix either (a request during the sync
-would cache half-updated data). The sync now clears the cache in a `finally` block, and a test covers the abort path.
+**The start of the season.** Three games in, there's nothing to compare with. The trend falls back to last season and
+says so. Rookies are judged on value alone. Players who missed all of last season are labelled `RETURNING` (I added
+ESPN's experience count to the schema for that). And an early slump only counts if a player with a real role (18+
+minutes) lost at least 15% of his minutes, since minutes settle within a few games and shot volume doesn't. I tuned
+these against real data; the two minutes rules took the early "cold" list from 74 players down to 47.
 
-**No global transaction for the sync.** Each save commits on its own, so a failure at player 400 keeps the first 399,
-and the idempotent upsert fills the gap on the next run.
+**`@CacheEvict` and exceptions.** Recomputing every player took ~350 ms per request, so the result is cached with
+Caffeine (~35 ms now) and cleared after each sync. My first version cleared it with `@CacheEvict` on the sync method.
+While writing tests for the failure path I noticed that `@CacheEvict` doesn't evict when the method throws, and the
+sync throws when it aborts, after it has already saved new data. So the API would have served stale results for up to
+a day. `beforeInvocation = true` doesn't help either, because a request during the sync would cache half-updated data.
+The sync now clears the cache in a `finally` block, and there's a test for the abort case.
 
-**Wrong data is worse than missing data.** Name matching across sources flags weak or tied matches as unsure, and the
-sync skips them; a changed ESPN response format fails loudly instead of storing wrong numbers.
+## Running it
 
-## Tech stack
-
-Java 21 (records, switch expressions, streams) · Spring Boot 4.1 (Web MVC, Data JPA, Validation, Cache) · PostgreSQL 16 ·
-Flyway · JdbcTemplate · Caffeine · JDK `HttpClient` · Jackson · springdoc-openapi · JUnit 5 · Mockito · Testcontainers ·
-Gradle (Kotlin DSL) · Docker Compose
-
-## Run locally
-
-Requires Java 21 and Docker.
+You need Java 21 and Docker.
 
 ```bash
-docker compose up -d     # PostgreSQL 16 (dev credentials in docker-compose.yml)
-./gradlew bootRun        # starts on :8080; Flyway creates the schema
+docker compose up -d     # Postgres 16
+./gradlew bootRun        # app on :8080, Flyway creates the schema
 ```
 
-Then open <http://localhost:8080/swagger-ui.html>.
-
-The database starts empty. A manual end-to-end run (the real ESPN and Sleeper sync plus OK/FAIL checks and a printed
-report) fills it:
+The database starts empty. To fill it with real data, run the demo profile once (about 2-3 minutes; it also prints a
+report, see [`demo/README.md`](src/main/java/com/ori_leibo/nbafantasyscout/demo/README.md)):
 
 ```bash
 ./gradlew bootRun --args="--spring.profiles.active=demo --spring.main.web-application-type=none"
 ```
 
-A full sync of all ~520 rostered players takes about 2 minutes today (single-threaded).
+Then start the app normally and open <http://localhost:8080/swagger-ui.html>.
 
-## Testing
+## Tests
 
 ```bash
-./gradlew test           # needs Docker for Testcontainers
+./gradlew test    # needs Docker running
 ```
 
-66 tests in 20 classes:
+66 tests. Plain JUnit for the domain and analytics, Mockito for the sync's failure handling, Testcontainers with a real
+Postgres 16 for the repositories and the upsert (the upsert is Postgres-specific SQL, so an in-memory DB wouldn't prove
+anything), and `@WebMvcTest` for the controllers.
 
-- **Unit tests** for the domain and analytics (trend windows, baselines, scoring, z-scores, classification, name matching)
-- **Mapper tests** on saved real ESPN and Sleeper JSON
-- **Mockito** tests of the sync's failure handling (skips, abort, empty roster, secondary source down, cache cleared on abort)
-- **Testcontainers** tests of the repositories and the upsert against PostgreSQL 16
-- **`@WebMvcTest`** tests of the controllers: JSON shape, validation, 400 and 404 problem details
+## Stack
 
-## Roadmap
+Java 21, Spring Boot 4.1 (Web MVC, Data JPA, Validation, Cache), PostgreSQL 16, Flyway, Caffeine, the JDK
+`HttpClient`, Jackson, springdoc-openapi, JUnit 5, Mockito, Testcontainers, Gradle (Kotlin DSL), Docker Compose.
 
-- [x] Schema and Flyway migrations
-- [x] Ingestion: ESPN rosters, injuries and box scores; Sleeper trending; idempotent upsert
-- [x] Analytics: trend, hot score, value, form, crowd signal
-- [x] REST API, Swagger UI, problem details, Caffeine cache
-- [x] Test suite (unit, Mockito, Testcontainers, `@WebMvcTest`)
-- [ ] **Concurrent ingestion**: `CompletableFuture` on a bounded pool, Resilience4j rate limiter and retry, MDC correlation
-      ids, a `SyncCompletedEvent`; measure the speedup, platform vs. virtual threads
-- [ ] Roster advice: keep / watch / drop with the best free-agent replacement (Chain of Responsibility rules, sealed
-      `Recommendation` types), then roster input from screenshots
-- [ ] Asynchronous sync endpoint (202 + job status), scheduler, a small web page
-- [ ] CI with GitHub Actions
+## What's next
 
-## Data sources
+- Make the sync concurrent: `CompletableFuture` on a bounded pool, a Resilience4j rate limiter and retries (ESPN
+  shouldn't get hammered), correlation ids in the logs, and a `SyncCompletedEvent`. Today a full sync of ~520 players
+  takes about 2 minutes one call at a time; I want to measure how far that drops, and compare platform vs. virtual
+  threads while I'm at it.
+- Roster advice: send your roster, get keep / watch / drop plus the best free agent to replace a drop. Later, reading
+  the roster from a screenshot.
+- Async sync endpoint with job status, a scheduler, and a small web page.
+- CI on GitHub Actions.
 
-Player data comes from ESPN's public (unofficial, undocumented) site API and from the [Sleeper API](https://docs.sleeper.com/).
-Both are free and need no key. This is a personal learning project, not affiliated with ESPN, Sleeper, Yahoo or the NBA.
+---
+
+Data comes from ESPN's public (undocumented) site API and the [Sleeper API](https://docs.sleeper.com/), both free and
+keyless. This is a personal project and isn't affiliated with ESPN, Sleeper, Yahoo or the NBA.
