@@ -11,6 +11,7 @@ import com.ori_leibo.nbafantasyscout.persistence.PlayerEntity;
 import com.ori_leibo.nbafantasyscout.persistence.PlayerRepository;
 import com.ori_leibo.nbafantasyscout.persistence.TrendingSnapshotEntity;
 import com.ori_leibo.nbafantasyscout.persistence.TrendingSnapshotRepository;
+import com.ori_leibo.nbafantasyscout.recommend.TrendService;
 import com.ori_leibo.nbafantasyscout.roster.PlayerMatcher;
 import java.time.Clock;
 import java.time.Duration;
@@ -22,6 +23,7 @@ import java.util.Optional;
 import java.util.Set;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.cache.annotation.CacheEvict;
 
 /**
  * The daily ingestion: ESPN players and game logs, then Sleeper trending adds/drops.
@@ -66,6 +68,9 @@ public class SyncService {
     }
 
     /** Throws only when the sync cannot go on: no players from ESPN, or ESPN failing call after call. */
+    // evicts even when the sync fails part-way: whatever it stored is new data
+    // shortcut: annotation instead of the planned SyncCompletedEvent listener; switch with step 8
+    @CacheEvict(cacheNames = TrendService.CACHE, allEntries = true)
     public Result syncDaily() {
         long start = System.nanoTime();
         Instant fetchedAt = clock.instant();

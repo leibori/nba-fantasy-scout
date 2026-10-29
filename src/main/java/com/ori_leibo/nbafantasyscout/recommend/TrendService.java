@@ -24,6 +24,7 @@ import java.util.OptionalDouble;
 import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.cache.annotation.Cacheable;
 
 /**
  * Loads stored players, games and the latest Sleeper snapshot, and runs the pure logic on them:
@@ -32,6 +33,7 @@ import org.slf4j.LoggerFactory;
 public class TrendService {
 
     private static final Logger log = LoggerFactory.getLogger(TrendService.class);
+    public static final String CACHE = "forms";
 
     private final PlayerRepository players;
     private final GameLogRepository gameLogs;
@@ -66,7 +68,11 @@ public class TrendService {
                              FormClassifier.Form form, TrendingSnapshot crowd, CrowdSignal crowdSignal) {
     }
 
-    /** Every player on a roster, in no particular order. */
+    /**
+     * Every player on a roster, in no particular order. Cached: the data only changes with a sync, which evicts it.
+     * Callers share the cached list, so it must stay read-only.
+     */
+    @Cacheable(CACHE)
     public List<PlayerForm> formOfAllPlayers() {
         long start = System.nanoTime();
         List<Player> roster = players.findAll().stream()

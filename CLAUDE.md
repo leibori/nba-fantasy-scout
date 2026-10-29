@@ -123,7 +123,7 @@ Layered architecture, Repository, DTO, Strategy (scoring, extractor), Adapter (A
 3. Call the data API once and inspect the real JSON; adjust schema: DONE (switched to ESPN, V1 reworked for Yahoo 9-cat)
 4. Domain records + `TrendCalculator` + scoring strategies, test-first, with unit tests (can start with fake games): DONE
 5. Single-threaded ingestion (ESPN players, injuries and game logs + Sleeper trending snapshots, Flyway V2); `PlayerMatcher` built here (needed for Sleeper name mapping), reused in step 9: DONE (single-threaded full sync: 140 s for 518 players)
-6. Recommendation endpoints + Caffeine cache + Swagger; `CrowdSignal` cross-check and crowd evidence in responses
+6. Recommendation endpoints + Caffeine cache + Swagger; `CrowdSignal` cross-check and crowd evidence in responses: DONE (cache: `formOfAllPlayers` computed once, ~1.5 s cold, then ~35 ms per request; evicted by `@CacheEvict` on `syncDaily`, moves to the `SyncCompletedEvent` listener in step 8)
 7. Tests: unit tests for domain logic, Testcontainers for repositories/ingestion, Mockito for services, `@WebMvcTest` for controllers
 8. Concurrency + Resilience4j + MDC + `SyncCompletedEvent`; optional comparison of platform threads vs virtual threads for fetching
 9. Roster endpoint (typed names), then screenshot input

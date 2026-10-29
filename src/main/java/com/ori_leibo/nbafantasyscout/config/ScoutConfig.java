@@ -20,11 +20,13 @@ import com.ori_leibo.nbafantasyscout.trend.TrendCalculator;
 import java.net.http.HttpClient;
 import java.time.Clock;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
+import org.springframework.cache.annotation.EnableCaching;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
 /** Builds the plain-Java clients and services from {@link ScoutProperties}; Spring only wires them. */
 @Configuration
+@EnableCaching
 @EnableConfigurationProperties(ScoutProperties.class)
 public class ScoutConfig {
 

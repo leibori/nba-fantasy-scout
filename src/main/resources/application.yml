@@ -9,6 +9,10 @@ spring:
     hibernate:
       ddl-auto: validate
     open-in-view: false
+  cache:
+    cache-names: forms
+    caffeine:
+      spec: maximumSize=1,expireAfterWrite=25h   # one list of all players; 25h = safety net if a daily sync is missed
 
 scout:
   espn:
