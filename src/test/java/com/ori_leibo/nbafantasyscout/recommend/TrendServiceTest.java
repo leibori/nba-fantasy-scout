@@ -67,12 +67,7 @@ class TrendServiceTest {
                 snapshot(1, TrendingSnapshot.Type.ADD, 9000, "2026-10-27T06:00:00Z"),
                 snapshot(2, TrendingSnapshot.Type.DROP, 400, "2026-10-27T06:00:00Z")));
 
-        // window 3, 5 baseline games, 15 minutes; hot at 0.15, high value from 1; league = 15+ minutes
-        TrendService service = new TrendService(players, gameLogs, snapshots, new TrendCalculator(3, 5, 15),
-                new HotStreakScoring(0.4, 0.3, 0.3), new FormClassifier(new HotStreakScoring(0.4, 0.3, 0.3), 0.15, 1, 18, 0.15),
-                SEASON, 15, 0.5);
-
-        Map<String, PlayerForm> forms = service.formOfAllPlayers().stream()
+        Map<String, PlayerForm> forms = service().formOfAllPlayers().stream()
                 .collect(Collectors.toMap(form -> form.player().name(), form -> form));
 
         assertEquals(4, forms.size(), "the waived player has no team and is left out");
@@ -95,6 +90,29 @@ class TrendServiceTest {
         // the bench guard is outside the value league but still gets a value against it
         assertEquals(Form.NEUTRAL, forms.get("Bench Guard").form());
         assertEquals(true, forms.get("Bench Guard").value() < 0);
+    }
+
+    @Test
+    void beforeTheFirstGameOfTheSeasonNobodyHasAValue() {
+        players.saveAllAndFlush(List.of(player(1, "Star", "LAL", 8), player(2, "Rookie", "SAS", 0)));
+        upsert.upsert(1, games(2026, 1, 10, 36, 30));                                  // last season only
+
+        List<PlayerForm> forms = service().formOfAllPlayers();
+
+        // no league to score against: no value, no trend, no crash
+        assertEquals(2, forms.size());
+        forms.forEach(form -> {
+            assertNull(form.value(), form.player().name());
+            assertNull(form.trend(), form.player().name());
+            assertEquals(Form.NEUTRAL, form.form(), form.player().name());
+        });
+    }
+
+    // window 3, 5 baseline games, 15 minutes; hot at 0.15, high value from 1; league = 15+ minutes
+    private TrendService service() {
+        return new TrendService(players, gameLogs, snapshots, new TrendCalculator(3, 5, 15),
+                new HotStreakScoring(0.4, 0.3, 0.3), new FormClassifier(new HotStreakScoring(0.4, 0.3, 0.3), 0.15, 1, 18, 0.15),
+                SEASON, 15, 0.5);
     }
 
     private static TrendingSnapshotEntity snapshot(long playerId, TrendingSnapshot.Type type, int count, String at) {

@@ -19,7 +19,10 @@ import com.ori_leibo.nbafantasyscout.trend.HotStreakScoring;
 import com.ori_leibo.nbafantasyscout.trend.TrendCalculator;
 import java.net.http.HttpClient;
 import java.time.Clock;
+import java.util.Objects;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
+import org.springframework.cache.Cache;
+import org.springframework.cache.CacheManager;
 import org.springframework.cache.annotation.EnableCaching;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -63,9 +66,12 @@ public class ScoutConfig {
     @Bean
     SyncService syncService(NbaDataClient nbaDataClient, SleeperClient sleeperClient, PlayerMatcher playerMatcher,
                             PlayerRepository players, GameLogUpsert gameLogUpsert, GameLogRepository gameLogs,
-                            TrendingSnapshotRepository snapshots, Clock clock, ScoutProperties properties) {
+                            TrendingSnapshotRepository snapshots, Clock clock, ScoutProperties properties,
+                            CacheManager cacheManager) {
+        // looked up once, so a wrong cache name fails at startup, not at the end of a sync
+        Cache forms = Objects.requireNonNull(cacheManager.getCache(TrendService.CACHE), "no cache " + TrendService.CACHE);
         return new SyncService(nbaDataClient, sleeperClient, playerMatcher, players, gameLogUpsert, gameLogs, snapshots, clock,
-                properties.sync().season(), properties.sync().maxConsecutiveFailures());
+                properties.sync().season(), properties.sync().maxConsecutiveFailures(), forms::clear);
     }
 
     @Bean

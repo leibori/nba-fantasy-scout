@@ -67,11 +67,12 @@ class SyncServiceTest {
     private ArgumentCaptor<List<TrendingSnapshotEntity>> savedSnapshots;
 
     private SyncService sync;
+    private int finishedRuns;
 
     @BeforeEach
     void setUp() {
         sync = new SyncService(nba, sleeper, new PlayerMatcher(0.85), players, gameLogUpsert, gameLogs, snapshots,
-                Clock.fixed(NOW, ZoneOffset.UTC), SEASON, 2);
+                Clock.fixed(NOW, ZoneOffset.UTC), SEASON, 2, () -> finishedRuns++);
         // by default every player already has last season stored; the backfill test overrides this
         lenient().when(gameLogs.findPlayerIdsWithGamesBetween(GameLog.seasonStart(SEASON - 1), GameLog.seasonEnd(SEASON - 1)))
                 .thenReturn(Set.of(LUKA.id(), JOKIC.id(), SGA.id()));
@@ -107,6 +108,7 @@ class SyncServiceTest {
         assertEquals(1, result.failedPlayers());
         verify(gameLogUpsert).upsert(SGA.id(), GAMES);
         verify(players).clearTeamExcept(List.of(1L, 2L, 3L));
+        assertEquals(1, finishedRuns);
     }
 
     @Test
@@ -118,6 +120,7 @@ class SyncServiceTest {
 
         verify(nba, times(2)).fetchGameLogs(anyLong(), anyInt());
         verifyNoInteractions(sleeper, snapshots);
+        assertEquals(1, finishedRuns, "an aborted sync still stored data, so the trend cache must be cleared");
     }
 
     @Test
