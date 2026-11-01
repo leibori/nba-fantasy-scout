@@ -3,8 +3,8 @@
 A Spring Boot backend that finds NBA players who are breaking out (or falling off) for fantasy basketball.
 It pulls real box scores every day, scores every player, and serves the results over a REST API.
 
-**Work in progress:** the sync, the scoring and the API work on live 2026-27 data. Next: a concurrent sync and
-keep/drop advice for your own roster.
+**Work in progress:** the sync, the scoring and the API work on live 2026-27 data. Next: keep/drop advice for your
+own roster.
 
 ## How it scores players
 
@@ -47,7 +47,7 @@ docker compose up -d
 ./gradlew bootRun
 ```
 
-The database starts empty. To load real data, run the sync once (2-3 minutes):
+The database starts empty. To load real data, run the sync once (about a minute):
 
 ```bash
 ./gradlew bootRun --args="--spring.profiles.active=demo --spring.main.web-application-type=none"
@@ -57,15 +57,17 @@ Tests: `./gradlew test` (Docker must be running; repository tests use Testcontai
 
 ## Worth knowing
 
+- The sync fetches players in parallel (8 threads, ESPN rate-limited to 20 calls/s, retries with backoff on 429/5xx):
+  162 s single-threaded, 47 s now. Every log line of one sync carries its correlation id, on every thread.
 - The sync is idempotent: a single `INSERT ... ON CONFLICT ... WHERE ... IS DISTINCT FROM` per player inserts new
   games, applies stat corrections and leaves unchanged rows alone.
 - Both data sources are unofficial, so failures are expected: bad players are skipped, a down source stops the sync
   cleanly, and nothing already saved is lost.
-- Results are cached with Caffeine (~350 ms down to ~35 ms per request) and cleared after every sync.
+- Results are cached with Caffeine (~350 ms down to ~35 ms per request) and rebuilt after every sync.
 
 ## Stack
 
-Java 21, Spring Boot 4.1, PostgreSQL 16, Flyway, Caffeine, springdoc-openapi, JUnit 5, Mockito, Testcontainers.
+Java 21, Spring Boot 4.1, PostgreSQL 16, Flyway, Caffeine, Resilience4j, springdoc-openapi, JUnit 5, Mockito, Testcontainers.
 
 ---
 

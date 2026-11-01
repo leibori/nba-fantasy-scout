@@ -29,6 +29,7 @@ import java.time.Clock;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.ZoneOffset;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -67,12 +68,12 @@ class SyncServiceTest {
     private ArgumentCaptor<List<TrendingSnapshotEntity>> savedSnapshots;
 
     private SyncService sync;
-    private int finishedRuns;
+    private final List<Object> events = new ArrayList<>();
 
     @BeforeEach
     void setUp() {
         sync = new SyncService(nba, sleeper, new PlayerMatcher(0.85), players, gameLogUpsert, gameLogs, snapshots,
-                Clock.fixed(NOW, ZoneOffset.UTC), SEASON, 2, () -> finishedRuns++);
+                Clock.fixed(NOW, ZoneOffset.UTC), Runnable::run, events::add, SEASON, 2);
         // by default every player already has last season stored; the backfill test overrides this
         lenient().when(gameLogs.findPlayerIdsWithGamesBetween(GameLog.seasonStart(SEASON - 1), GameLog.seasonEnd(SEASON - 1)))
                 .thenReturn(Set.of(LUKA.id(), JOKIC.id(), SGA.id()));
@@ -108,7 +109,7 @@ class SyncServiceTest {
         assertEquals(1, result.failedPlayers());
         verify(gameLogUpsert).upsert(SGA.id(), GAMES);
         verify(players).clearTeamExcept(List.of(1L, 2L, 3L));
-        assertEquals(1, finishedRuns);
+        assertEquals(List.of(new SyncCompletedEvent(result)), events);
     }
 
     @Test
@@ -120,7 +121,8 @@ class SyncServiceTest {
 
         verify(nba, times(2)).fetchGameLogs(anyLong(), anyInt());
         verifyNoInteractions(sleeper, snapshots);
-        assertEquals(1, finishedRuns, "an aborted sync still stored data, so the trend cache must be cleared");
+        assertEquals(List.of(new SyncCompletedEvent(null)), events,
+                "an aborted sync still stored data, so listeners must hear of it");
     }
 
     @Test

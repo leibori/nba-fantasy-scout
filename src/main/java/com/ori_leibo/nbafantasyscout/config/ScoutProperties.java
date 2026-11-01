@@ -5,16 +5,20 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 
 /** Everything under {@code scout:} in application.yml, bound once at startup. */
 @ConfigurationProperties("scout")
-public record ScoutProperties(Espn espn, Sleeper sleeper, Sync sync, Matcher matcher, Trend trend, HotStreak hotStreak) {
+public record ScoutProperties(Espn espn, Sleeper sleeper, Http http, Sync sync, Matcher matcher, Trend trend, HotStreak hotStreak) {
 
-    public record Espn(String teamsBaseUrl, String gameLogBaseUrl, Duration timeout) {
+    public record Espn(String teamsBaseUrl, String gameLogBaseUrl, Duration timeout, int maxCallsPerSecond) {
     }
 
-    public record Sleeper(String baseUrl, Duration timeout, int lookbackHours, int limit) {
+    public record Sleeper(String baseUrl, Duration timeout, int maxCallsPerSecond, int lookbackHours, int limit) {
+    }
+
+    /** Retries for both sources: {@code maxAttempts} includes the first call; the wait doubles after each one. */
+    public record Http(int maxAttempts, Duration initialBackoff) {
     }
 
     /** {@code season} is the year the season ends (2026 = 2025-26). */
-    public record Sync(int season, int maxConsecutiveFailures) {
+    public record Sync(int season, int threads, int maxConsecutiveFailures) {
     }
 
     public record Matcher(double minConfidence) {

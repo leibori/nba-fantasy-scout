@@ -19,13 +19,19 @@ scout:
     teams-base-url: https://site.api.espn.com/apis/site/v2/sports/basketball/nba
     game-log-base-url: https://site.web.api.espn.com/apis/common/v3/sports/basketball/nba
     timeout: 10s
+    max-calls-per-second: 20   # shared by all sync threads
   sleeper:
     base-url: https://api.sleeper.app/v1
     timeout: 30s               # the player list is ~2.5 MB
+    max-calls-per-second: 5
     lookback-hours: 24
     limit: 25
+  http:
+    max-attempts: 3            # first call + 2 retries, on network errors, 429 and 5xx
+    initial-backoff: 500ms     # then 1s
   sync:
     season: 2027               # year the season ends (2027 = 2026-27)
+    threads: 8                 # parallel game log fetches; stays under Hikari's default pool of 10 connections
     max-consecutive-failures: 10
   matcher:
     min-confidence: 0.85       # below this a name match is "unsure"
@@ -45,6 +51,8 @@ scout:
     opportunity-weight: 0.3
 
 logging:
+  pattern:
+    correlation: "%correlationId{correlationId(13)}" # the sync's id on every line, on every thread
   file:
     name: logs/scout.log
   logback:

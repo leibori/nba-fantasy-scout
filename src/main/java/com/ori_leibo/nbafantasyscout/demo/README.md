@@ -16,8 +16,8 @@ docker compose up -d
 `web-application-type=none` skips the web server, so the app exits when the report is done. In IntelliJ: set the active
 profile to `demo` and add the same program argument.
 
-A full run takes 2-3 minutes because the sync fetches every player's games one call at a time. On an empty database the
-first run also pulls last season for everyone, so it takes about twice as long.
+A full run takes about a minute: the sync fetches every player's games on 8 threads, capped at 20 ESPN calls a second.
+On an empty database the first run also pulls last season for everyone, so it takes about twice as long.
 
 > If ESPN calls fail with `PKIX path building failed`, something on the machine (antivirus, corporate proxy) is
 > inspecting HTTPS. Add `-Djavax.net.ssl.trustStoreType=Windows-ROOT` to the JVM options to use the Windows
@@ -26,7 +26,7 @@ first run also pulls last season for everyone, so it takes about twice as long.
 ## What it does
 
 1. **Sync.** Runs the daily sync and prints the summary, e.g.
-   `518 players, 0 game logs new or changed, last season fetched for 80, 0 failed players, 49 snapshots, took 120 s`.
+   `521 players, 0 game logs new or changed, last season fetched for 80, 0 failed players, 50 snapshots, took 46 s`.
    Then checks that ESPN returned a full league (400+ players), that injury statuses came through, that no player
    failed, and that Sleeper trending rows were matched and stored.
 2. **Upsert again.** Re-saves Luka Doncic's season and checks that nothing changed. If the upsert ever starts

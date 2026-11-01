@@ -20,11 +20,19 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.UUID;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.Executor;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.slf4j.MDC;
+import org.springframework.context.ApplicationEventPublisher;
 
 /**
  * The daily ingestion: ESPN players and game logs, then Sleeper trending adds/drops.
+ * Game logs are fetched in parallel on {@code executor}, one task per player; the HTTP clients rate-limit the calls.
  * Last season's games are fetched once per player (early-season trends use them as the baseline).
  * Deliberately not one transaction: every save commits on its own, so a failure part-way keeps what was stored,
  * and the next run fills the gap (game log upserts are idempotent).
@@ -32,6 +40,8 @@ import org.slf4j.LoggerFactory;
 public class SyncService {
 
     private static final Logger log = LoggerFactory.getLogger(SyncService.class);
+    /** MDC key put on every log line of one sync, on every thread (see the logging pattern in application.yml). */
+    public static final String CORRELATION_ID = "correlationId";
 
     private final NbaDataClient nba;
     private final SleeperClient sleeper;
@@ -43,13 +53,13 @@ public class SyncService {
     private final Clock clock;
     private final int season;
     private final int maxConsecutiveFailures;
-    // clears the trend cache for now; TODO: publish a SyncCompletedEvent instead once the sync runs async
-    private final Runnable onFinished;
+    private final Executor executor;
+    private final ApplicationEventPublisher events;
 
     public SyncService(NbaDataClient nba, SleeperClient sleeper, PlayerMatcher matcher, PlayerRepository players,
                        GameLogUpsert gameLogUpsert, GameLogRepository gameLogs, TrendingSnapshotRepository snapshots,
-                       Clock clock,
-                       int season, int maxConsecutiveFailures, Runnable onFinished) {
+                       Clock clock, Executor executor, ApplicationEventPublisher events,
+                       int season, int maxConsecutiveFailures) {
         this.nba = nba;
         this.sleeper = sleeper;
         this.matcher = matcher;
@@ -60,7 +70,8 @@ public class SyncService {
         this.clock = clock;
         this.season = season;
         this.maxConsecutiveFailures = maxConsecutiveFailures;
-        this.onFinished = onFinished;
+        this.executor = executor;
+        this.events = events;
     }
 
     /** What one sync did; {@code took} is the wall time, the number to compare once fetching runs in parallel. */
@@ -70,14 +81,23 @@ public class SyncService {
 
     /**
      * Throws only when the sync cannot go on: no players from ESPN, or ESPN failing call after call.
-     * {@code onFinished} runs either way: an aborted sync has still stored new data.
+     * A {@link SyncCompletedEvent} is published either way: an aborted sync has still stored new data.
      */
     public Result syncDaily() {
-        try {
-            return runSync();
-        } finally {
-            onFinished.run();
+        try (MDC.MDCCloseable ignored = MDC.putCloseable(CORRELATION_ID, "sync-" + UUID.randomUUID().toString().substring(0, 8))) {
+            Result result = null;
+            try {
+                result = runSync();
+                return result;
+            } finally {
+                events.publishEvent(new SyncCompletedEvent(result));
+            }
         }
+    }
+
+    /** One player's part of the sync; a skipped player (the sync is aborting) counts as neither done nor failed. */
+    private record PlayerSync(int gamesChanged, boolean lastSeasonFetched, boolean failed) {
+        static final PlayerSync SKIPPED = new PlayerSync(0, false, false);
     }
 
     private Result runSync() {
@@ -92,30 +112,23 @@ public class SyncService {
         Set<Long> haveLastSeason = gameLogs.findPlayerIdsWithGamesBetween(
                 GameLog.seasonStart(lastSeason), GameLog.seasonEnd(lastSeason));
 
-        int gamesChanged = 0;
-        int lastSeasonFetched = 0;
-        int failedPlayers = 0;
-        int consecutiveFailures = 0;
-        for (Player player : roster) {
-            try {
-                gamesChanged += gameLogUpsert.upsert(player.id(), nba.fetchGameLogs(player.id(), season));
-                if (!haveLastSeason.contains(player.id())) {
-                    gamesChanged += gameLogUpsert.upsert(player.id(), nba.fetchGameLogs(player.id(), lastSeason));
-                    lastSeasonFetched++;
-                }
-                consecutiveFailures = 0;
-            } catch (RuntimeException e) {
-                if (Thread.currentThread().isInterrupted()) {
-                    throw e;
-                }
-                failedPlayers++;
-                log.error("Game log sync failed for {} ({}), skipping", player.name(), player.id(), e);
-                if (++consecutiveFailures >= maxConsecutiveFailures) {
-                    throw new IllegalStateException(
-                            "Sync aborted after %d failures in a row; ESPN looks down".formatted(consecutiveFailures), e);
-                }
-            }
+        // "in a row" across threads: any success resets it, so only a source that keeps failing reaches the limit
+        AtomicInteger consecutiveFailures = new AtomicInteger();
+        AtomicReference<RuntimeException> abortCause = new AtomicReference<>();
+        // submit every player first, then wait; one stream would wait for each task before submitting the next
+        List<CompletableFuture<PlayerSync>> tasks = roster.stream()
+                .map(player -> CompletableFuture.supplyAsync(
+                        () -> syncGames(player, haveLastSeason, consecutiveFailures, abortCause), executor))
+                .toList();
+        List<PlayerSync> synced = tasks.stream().map(CompletableFuture::join).toList();
+        if (abortCause.get() != null) {
+            throw new IllegalStateException(
+                    "Sync aborted after %d failures in a row; ESPN looks down".formatted(maxConsecutiveFailures),
+                    abortCause.get());
         }
+        int gamesChanged = synced.stream().mapToInt(PlayerSync::gamesChanged).sum();
+        int lastSeasonFetched = (int) synced.stream().filter(PlayerSync::lastSeasonFetched).count();
+        int failedPlayers = (int) synced.stream().filter(PlayerSync::failed).count();
 
         int snapshotCount = syncTrending(roster, fetchedAt);
 
@@ -123,6 +136,32 @@ public class SyncService {
                 Duration.ofNanos(System.nanoTime() - start));
         log.info("Daily sync done: {}", result);
         return result;
+    }
+
+    // runs on a pool thread
+    private PlayerSync syncGames(Player player, Set<Long> haveLastSeason, AtomicInteger consecutiveFailures,
+                                 AtomicReference<RuntimeException> abortCause) {
+        if (abortCause.get() != null) {
+            return PlayerSync.SKIPPED;
+        }
+        try {
+            int changed = gameLogUpsert.upsert(player.id(), nba.fetchGameLogs(player.id(), season));
+            boolean backfill = !haveLastSeason.contains(player.id());
+            if (backfill) {
+                changed += gameLogUpsert.upsert(player.id(), nba.fetchGameLogs(player.id(), season - 1));
+            }
+            consecutiveFailures.set(0);
+            return new PlayerSync(changed, backfill, false);
+        } catch (RuntimeException e) {
+            if (Thread.currentThread().isInterrupted()) {
+                throw e;
+            }
+            log.error("Game log sync failed for {} ({}), skipping", player.name(), player.id(), e);
+            if (consecutiveFailures.incrementAndGet() >= maxConsecutiveFailures) {
+                abortCause.compareAndSet(null, e);
+            }
+            return new PlayerSync(0, false, true);
+        }
     }
 
     private List<Player> syncPlayers() {
