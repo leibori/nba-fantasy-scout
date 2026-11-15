@@ -52,7 +52,7 @@ public class GameLogSync {
     public Result sync(List<Player> roster) {
         log.info("Syncing game logs of {} players for season {}", roster.size(), season);
         int lastSeason = season - 1;
-        // TODO: players with no games last season (rookies) are asked again every sync, ~80 calls;
+        // TODO: veterans with no games last season (a lost season) are asked again every sync; only a handful,
         // remember "checked" players if that ever matters
         Set<Long> haveLastSeason = gameLogs.findPlayerIdsWithGamesBetween(
                 GameLog.seasonStart(lastSeason), GameLog.seasonEnd(lastSeason));
@@ -85,7 +85,9 @@ public class GameLogSync {
         }
         try {
             int changed = gameLogUpsert.upsert(player.id(), nba.fetchGameLogs(player.id(), season));
-            boolean backfill = !haveLastSeason.contains(player.id());
+            // a rookie has no last season to fetch; unknown experience (null) still fetches
+            boolean backfill = !haveLastSeason.contains(player.id())
+                    && !Integer.valueOf(0).equals(player.experienceYears());
             if (backfill) {
                 changed += gameLogUpsert.upsert(player.id(), nba.fetchGameLogs(player.id(), season - 1));
             }

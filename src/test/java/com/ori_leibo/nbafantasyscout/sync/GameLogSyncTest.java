@@ -32,7 +32,8 @@ class GameLogSyncTest {
     private static final int SEASON = 2026;
     private static final Player LUKA = new Player(1, "Luka Dončić", "LAL", "G", null, null);
     private static final Player JOKIC = new Player(2, "Nikola Jokić", "DEN", "C", null, null);
-    private static final Player SGA = new Player(3, "Shai Gilgeous-Alexander", "OKC", "G", null, null);    private static final List<GameLog> GAMES = List.of(
+    private static final Player SGA = new Player(3, "Shai Gilgeous-Alexander", "OKC", "G", null, null);
+    private static final Player FLAGG = new Player(4, "Cooper Flagg", "DAL", "F", null, 0);    private static final List<GameLog> GAMES = List.of(
             new GameLog(LocalDate.of(2026, 1, 2), 36, 10, 21, 4, 7, 9, 11, 6, 2, 1, 3, 31));
 
     @Mock
@@ -54,17 +55,19 @@ class GameLogSyncTest {
     }
 
     @Test
-    void fetchesLastSeasonOnlyForPlayersWhoDoNotHaveItYet() {
+    void fetchesLastSeasonOnlyForNonRookiesWhoDoNotHaveItYet() {
         when(gameLogs.findPlayerIdsWithGamesBetween(GameLog.seasonStart(SEASON - 1), GameLog.seasonEnd(SEASON - 1)))
                 .thenReturn(Set.of(LUKA.id()));
         when(nba.fetchGameLogs(anyLong(), eq(SEASON))).thenReturn(List.of());
         when(nba.fetchGameLogs(JOKIC.id(), SEASON - 1)).thenReturn(GAMES);
 
-        GameLogSync.Result result = sync.sync(List.of(LUKA, JOKIC));
+        // Jokic: unknown experience, still fetched; Flagg: rookie, nothing to fetch
+        GameLogSync.Result result = sync.sync(List.of(LUKA, JOKIC, FLAGG));
 
         assertEquals(1, result.lastSeasonFetched());
         verify(gameLogUpsert).upsert(JOKIC.id(), GAMES);
         verify(nba, never()).fetchGameLogs(LUKA.id(), SEASON - 1);
+        verify(nba, never()).fetchGameLogs(FLAGG.id(), SEASON - 1);
     }
 
     @Test
