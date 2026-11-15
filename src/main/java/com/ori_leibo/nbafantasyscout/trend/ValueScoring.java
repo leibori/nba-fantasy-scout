@@ -29,12 +29,13 @@ public class ValueScoring {
         double leagueFgPct = sum(league, StatLine::fieldGoalsMade) / sum(league, StatLine::fieldGoalsAttempted);
         double leagueFtPct = sum(league, StatLine::freeThrowsMade) / sum(league, StatLine::freeThrowsAttempted);
         for (StatCategory category : StatCategory.values()) {
-            measures.put(category, switch (category) {
+            ToDoubleFunction<StatLine> measure = switch (category) {
                 case FG_PCT -> line -> line.fieldGoalsMade() - leagueFgPct * line.fieldGoalsAttempted();
                 case FT_PCT -> line -> line.freeThrowsMade() - leagueFtPct * line.freeThrowsAttempted();
                 default -> category::valueOf;
-            });
-            meanAndStdDev.put(category, meanAndStdDev(league, measures.get(category)));
+            };
+            measures.put(category, measure);
+            meanAndStdDev.put(category, meanAndStdDev(league, measure));
         }
     }
 

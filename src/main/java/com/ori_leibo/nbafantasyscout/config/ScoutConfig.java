@@ -15,7 +15,9 @@ import com.ori_leibo.nbafantasyscout.recommend.RecommendationService;
 import com.ori_leibo.nbafantasyscout.recommend.TrendCacheRefresher;
 import com.ori_leibo.nbafantasyscout.recommend.TrendService;
 import com.ori_leibo.nbafantasyscout.roster.PlayerMatcher;
+import com.ori_leibo.nbafantasyscout.sync.GameLogSync;
 import com.ori_leibo.nbafantasyscout.sync.SyncService;
+import com.ori_leibo.nbafantasyscout.sync.TrendingSync;
 import com.ori_leibo.nbafantasyscout.trend.FormClassifier;
 import com.ori_leibo.nbafantasyscout.trend.HotStreakScoring;
 import com.ori_leibo.nbafantasyscout.trend.TrendCalculator;
@@ -105,12 +107,21 @@ public class ScoutConfig {
     }
 
     @Bean
-    SyncService syncService(NbaDataClient nbaDataClient, SleeperClient sleeperClient, PlayerMatcher playerMatcher,
-                            PlayerRepository players, GameLogUpsert gameLogUpsert, GameLogRepository gameLogs,
-                            TrendingSnapshotRepository snapshots, Clock clock, Executor syncExecutor,
-                            ApplicationEventPublisher events, ScoutProperties properties) {
-        return new SyncService(nbaDataClient, sleeperClient, playerMatcher, players, gameLogUpsert, gameLogs, snapshots, clock,
-                syncExecutor, events, properties.sync().season(), properties.sync().maxConsecutiveFailures());
+    GameLogSync gameLogSync(NbaDataClient nbaDataClient, GameLogUpsert gameLogUpsert, GameLogRepository gameLogs,
+                            Executor syncExecutor, ScoutProperties properties) {
+        return new GameLogSync(nbaDataClient, gameLogUpsert, gameLogs, syncExecutor,
+                properties.sync().season(), properties.sync().maxConsecutiveFailures());
+    }
+
+    @Bean
+    TrendingSync trendingSync(SleeperClient sleeperClient, PlayerMatcher playerMatcher, TrendingSnapshotRepository snapshots) {
+        return new TrendingSync(sleeperClient, playerMatcher, snapshots);
+    }
+
+    @Bean
+    SyncService syncService(NbaDataClient nbaDataClient, PlayerRepository players, GameLogSync gameLogSync,
+                            TrendingSync trendingSync, Clock clock, ApplicationEventPublisher events) {
+        return new SyncService(nbaDataClient, players, gameLogSync, trendingSync, clock, events);
     }
 
     @Bean
