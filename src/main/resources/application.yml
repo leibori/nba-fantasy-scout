@@ -10,9 +10,9 @@ spring:
       ddl-auto: validate
     open-in-view: false
   cache:
-    cache-names: forms
+    cache-names: season
     caffeine:
-      spec: maximumSize=1,expireAfterWrite=25h   # one list of all players; 25h = safety net if a daily sync is missed
+      spec: maximumSize=1,expireAfterWrite=25h   # one season snapshot of all players; 25h = safety net if a daily sync is missed
 
 scout:
   espn:

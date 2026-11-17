@@ -1,5 +1,6 @@
 package com.ori_leibo.nbafantasyscout.recommend;
 
+import com.ori_leibo.nbafantasyscout.domain.LeagueScoring;
 import com.ori_leibo.nbafantasyscout.domain.StatCategory;
 import com.ori_leibo.nbafantasyscout.recommend.TrendService.PlayerForm;
 import com.ori_leibo.nbafantasyscout.trend.CategoryScoring;
@@ -17,9 +18,11 @@ public class RecommendationService {
     private static final Set<Form> RISING = EnumSet.of(Form.HOT, Form.EARLY_HOT, Form.RETURNING);
 
     private final TrendService trends;
+    private final LeagueScoring leagueScoring;
 
-    public RecommendationService(TrendService trends) {
+    public RecommendationService(TrendService trends, LeagueScoring leagueScoring) {
         this.trends = trends;
+        this.leagueScoring = leagueScoring;
     }
 
     /** One player's change in one category vs. his baseline; positive = better (fewer turnovers counts as better). */
@@ -31,7 +34,7 @@ public class RecommendationService {
      * a rookie has no baseline and so no hot score, but every rising player has a value.
      */
     public List<PlayerForm> hot(int limit) {
-        return trends.formOfAllPlayers().stream()
+        return trends.formOfAllPlayers(leagueScoring).stream()
                 .filter(form -> RISING.contains(form.form()))
                 .sorted(Comparator.comparing(PlayerForm::value, Comparator.nullsLast(Comparator.reverseOrder())))
                 .limit(limit)
@@ -41,7 +44,7 @@ public class RecommendationService {
     /** Biggest improvement in one category; players without a trend (no baseline yet) are left out. */
     public List<CategoryChange> byCategory(StatCategory category, int limit) {
         ScoringStrategy scoring = new CategoryScoring(category);
-        return trends.formOfAllPlayers().stream()
+        return trends.formOfAllPlayers(leagueScoring).stream()
                 .filter(form -> form.trend() != null)
                 .map(form -> new CategoryChange(form, scoring.score(form.trend())))
                 .sorted(Comparator.comparingDouble(CategoryChange::change).reversed())
@@ -51,7 +54,7 @@ public class RecommendationService {
 
     /** Empty when no rostered player has this ESPN id. */
     public Optional<PlayerForm> player(long playerId) {
-        return trends.formOfAllPlayers().stream()
+        return trends.formOfAllPlayers(leagueScoring).stream()
                 .filter(form -> form.player().id() == playerId)
                 .findFirst();
     }

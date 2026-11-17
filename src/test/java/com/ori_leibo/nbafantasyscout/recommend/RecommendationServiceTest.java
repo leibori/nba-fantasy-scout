@@ -2,8 +2,10 @@ package com.ori_leibo.nbafantasyscout.recommend;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
 
+import com.ori_leibo.nbafantasyscout.domain.LeagueScoring;
 import com.ori_leibo.nbafantasyscout.domain.Player;
 import com.ori_leibo.nbafantasyscout.domain.StatCategory;
 import com.ori_leibo.nbafantasyscout.domain.StatLine;
@@ -11,9 +13,9 @@ import com.ori_leibo.nbafantasyscout.recommend.TrendService.PlayerForm;
 import com.ori_leibo.nbafantasyscout.trend.FormClassifier.Form;
 import com.ori_leibo.nbafantasyscout.trend.Trend;
 import java.util.List;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
@@ -22,8 +24,12 @@ class RecommendationServiceTest {
 
     @Mock
     private TrendService trends;
-    @InjectMocks
     private RecommendationService recommendations;
+
+    @BeforeEach
+    void setUp() {
+        recommendations = new RecommendationService(trends, new LeagueScoring.Categories());
+    }
 
     private static StatLine blocks(double blocks) {
         return new StatLine(30, 5, 10, 1, 2, 3, 6, 3, 1, blocks, 2, 13);
@@ -36,7 +42,7 @@ class RecommendationServiceTest {
 
     @Test
     void hotListHasOnlyRisingPlayersBestValueFirst() {
-        when(trends.formOfAllPlayers()).thenReturn(List.of(
+        when(trends.formOfAllPlayers(any())).thenReturn(List.of(
                 form(1, Form.GOOD, 9.0, null),
                 form(2, Form.EARLY_HOT, 2.0, null),
                 form(3, Form.RETURNING, 5.0, null),
@@ -49,7 +55,7 @@ class RecommendationServiceTest {
 
     @Test
     void categoryRankingSkipsPlayersWithoutATrend() {
-        when(trends.formOfAllPlayers()).thenReturn(List.of(
+        when(trends.formOfAllPlayers(any())).thenReturn(List.of(
                 form(1, Form.NEUTRAL, 0.0, new Trend(blocks(1.5), blocks(1.0), Trend.Baseline.THIS_SEASON)),
                 form(2, Form.NEUTRAL, 0.0, new Trend(blocks(3.0), blocks(1.0), Trend.Baseline.THIS_SEASON)),
                 form(3, Form.EARLY_HOT, 4.0, null)));
@@ -62,7 +68,7 @@ class RecommendationServiceTest {
 
     @Test
     void findsOnePlayerById() {
-        when(trends.formOfAllPlayers()).thenReturn(List.of(form(1, Form.GOOD, 3.0, null)));
+        when(trends.formOfAllPlayers(any())).thenReturn(List.of(form(1, Form.GOOD, 3.0, null)));
 
         assertEquals(1L, recommendations.player(1).orElseThrow().player().id());
         assertTrue(recommendations.player(99).isEmpty());

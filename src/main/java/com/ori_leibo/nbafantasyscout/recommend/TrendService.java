@@ -1,62 +1,31 @@
 package com.ori_leibo.nbafantasyscout.recommend;
 
-import com.ori_leibo.nbafantasyscout.domain.GameLog;
+import com.ori_leibo.nbafantasyscout.domain.LeagueScoring;
 import com.ori_leibo.nbafantasyscout.domain.Player;
 import com.ori_leibo.nbafantasyscout.domain.StatLine;
 import com.ori_leibo.nbafantasyscout.domain.TrendingSnapshot;
-import com.ori_leibo.nbafantasyscout.persistence.GameLogEntity;
-import com.ori_leibo.nbafantasyscout.persistence.GameLogRepository;
-import com.ori_leibo.nbafantasyscout.persistence.PlayerEntity;
-import com.ori_leibo.nbafantasyscout.persistence.PlayerRepository;
-import com.ori_leibo.nbafantasyscout.persistence.TrendingSnapshotEntity;
-import com.ori_leibo.nbafantasyscout.persistence.TrendingSnapshotRepository;
 import com.ori_leibo.nbafantasyscout.trend.CategoryValueScoring;
 import com.ori_leibo.nbafantasyscout.trend.FormClassifier;
-import com.ori_leibo.nbafantasyscout.trend.ScoringStrategy;
+import com.ori_leibo.nbafantasyscout.trend.PointsValueScoring;
 import com.ori_leibo.nbafantasyscout.trend.Trend;
-import com.ori_leibo.nbafantasyscout.trend.TrendCalculator;
 import com.ori_leibo.nbafantasyscout.trend.ValueScoring;
-import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
 import java.util.OptionalDouble;
-import java.util.stream.Collectors;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.springframework.cache.annotation.Cacheable;
 
 /**
- * Loads stored players, games and the latest Sleeper snapshot, and runs the pure logic on them:
- * trend, hot score, value, form, and the crowd signal next to it.
+ * Every player's form in one league format: the cached {@link SeasonData} plus what depends on the format,
+ * value (9-cat z-scores or fantasy points), the form built on it, and the crowd signal next to it.
  */
 public class TrendService {
 
-    private static final Logger log = LoggerFactory.getLogger(TrendService.class);
-    public static final String CACHE = "forms";
-
-    private final PlayerRepository players;
-    private final GameLogRepository gameLogs;
-    private final TrendingSnapshotRepository snapshots;
-    private final TrendCalculator calculator;
-    private final ScoringStrategy hotScoring;
+    private final SeasonData seasonData;
     private final FormClassifier classifier;
-    private final int season;
-    private final double leagueMinMinutes;
     private final double percentageWeight;
 
-    public TrendService(PlayerRepository players, GameLogRepository gameLogs, TrendingSnapshotRepository snapshots,
-                        TrendCalculator calculator, ScoringStrategy hotScoring, FormClassifier classifier, int season,
-                        double leagueMinMinutes, double percentageWeight) {
-        this.players = players;
-        this.gameLogs = gameLogs;
-        this.snapshots = snapshots;
-        this.calculator = calculator;
-        this.hotScoring = hotScoring;
+    public TrendService(SeasonData seasonData, FormClassifier classifier, double percentageWeight) {
+        this.seasonData = seasonData;
         this.classifier = classifier;
-        this.season = season;
-        this.leagueMinMinutes = leagueMinMinutes;
         this.percentageWeight = percentageWeight;
     }
 
@@ -69,71 +38,31 @@ public class TrendService {
                              FormClassifier.Form form, TrendingSnapshot crowd, CrowdSignal crowdSignal) {
     }
 
-    /**
-     * Every player on a roster, in no particular order. Cached: the data only changes with a sync, which evicts it.
-     * Callers share the cached list, so it must stay read-only.
-     */
-    @Cacheable(CACHE)
-    public List<PlayerForm> formOfAllPlayers() {
-        long start = System.nanoTime();
-        List<Player> roster = players.findAll().stream()
-                .map(PlayerEntity::toPlayer)
-                .filter(player -> player.team() != null)
-                .toList();
-        // one query for all games (~25k small rows) instead of one per player
-        Map<Long, List<GameLog>> gamesByPlayer = gameLogs.findAll().stream()
-                .collect(Collectors.groupingBy(GameLogEntity::playerId,
-                        Collectors.mapping(GameLogEntity::toGameLog, Collectors.toList())));
-
-        Map<Long, List<GameLog>> thisSeason = new HashMap<>();
-        Map<Long, List<GameLog>> lastSeason = new HashMap<>();
-        Map<Long, StatLine> thisSeasonLines = new HashMap<>();
-        for (Player player : roster) {
-            List<GameLog> games = gamesByPlayer.getOrDefault(player.id(), List.of());
-            List<GameLog> current = games.stream().filter(game -> game.season() == season).toList();
-            thisSeason.put(player.id(), current);
-            lastSeason.put(player.id(), games.stream().filter(game -> game.season() == season - 1).toList());
-            if (!current.isEmpty()) {
-                thisSeasonLines.put(player.id(), StatLine.average(current));
-            }
-        }
-
-        List<StatLine> league = thisSeasonLines.values().stream()
-                .filter(line -> line.minutes() >= leagueMinMinutes)
-                .toList();
-        Optional<ValueScoring> valueScoring = league.isEmpty()
+    /** Every player on a roster, in no particular order; recomputed per call, only the season data is cached. */
+    public List<PlayerForm> formOfAllPlayers(LeagueScoring scoring) {
+        SeasonData.Snapshot data = seasonData.load();
+        Optional<ValueScoring> valueScoring = data.league().isEmpty()
                 ? Optional.empty()
-                : Optional.of(new CategoryValueScoring(league, percentageWeight));
-        Map<Long, TrendingSnapshot> crowdByPlayer = latestCrowd();
-
-        List<PlayerForm> forms = new ArrayList<>();
-        for (Player player : roster) {
-            List<GameLog> last = lastSeason.get(player.id());
-            Optional<Trend> trend = calculator.calculate(thisSeason.get(player.id()), last);
-            StatLine line = thisSeasonLines.get(player.id());
-            OptionalDouble value = line == null || valueScoring.isEmpty()
-                    ? OptionalDouble.empty()
-                    : OptionalDouble.of(valueScoring.get().score(line));
-            FormClassifier.Form form = classifier.classify(trend, value, history(player, last));
-            TrendingSnapshot crowd = crowdByPlayer.get(player.id());
-            forms.add(new PlayerForm(player, thisSeason.get(player.id()).size(), trend.orElse(null),
-                    trend.map(hotScoring::score).orElse(null),
-                    value.isPresent() ? value.getAsDouble() : null,
-                    form, crowd, CrowdSignal.of(form, crowd(crowd))));
-        }
-        log.info("Computed form of {} players against a value league of {} in {} ms",
-                forms.size(), league.size(), (System.nanoTime() - start) / 1_000_000);
-        return forms;
+                : Optional.of(valueScoring(scoring, data.league()));
+        return data.players().stream()
+                .map(season -> {
+                    OptionalDouble value = season.line() == null || valueScoring.isEmpty()
+                            ? OptionalDouble.empty()
+                            : OptionalDouble.of(valueScoring.get().score(season.line()));
+                    FormClassifier.Form form = classifier.classify(Optional.ofNullable(season.trend()), value,
+                            season.history());
+                    return new PlayerForm(season.player(), season.gamesThisSeason(), season.trend(), season.hotScore(),
+                            value.isPresent() ? value.getAsDouble() : null,
+                            form, season.crowd(), CrowdSignal.of(form, crowd(season.crowd())));
+                })
+                .toList();
     }
 
-    // a player in both lists (rare) is judged by the bigger count
-    private Map<Long, TrendingSnapshot> latestCrowd() {
-        return snapshots.findFirstByOrderByFetchedAtDesc()
-                .map(latest -> snapshots.findByFetchedAt(latest.toSnapshot().fetchedAt()).stream()
-                        .map(TrendingSnapshotEntity::toSnapshot)
-                        .collect(Collectors.toMap(TrendingSnapshot::playerId, snapshot -> snapshot,
-                                (a, b) -> a.count() >= b.count() ? a : b)))
-                .orElse(Map.of());
+    private ValueScoring valueScoring(LeagueScoring scoring, List<StatLine> league) {
+        return switch (scoring) {
+            case LeagueScoring.Categories categories -> new CategoryValueScoring(league, percentageWeight);
+            case LeagueScoring.Points points -> new PointsValueScoring(league, points);
+        };
     }
 
     private static CrowdSignal.Crowd crowd(TrendingSnapshot snapshot) {
@@ -141,15 +70,5 @@ public class TrendService {
             return CrowdSignal.Crowd.QUIET;
         }
         return snapshot.type() == TrendingSnapshot.Type.ADD ? CrowdSignal.Crowd.ADDS : CrowdSignal.Crowd.DROPS;
-    }
-
-    // no games last season: a rookie by ESPN's experience count (0), otherwise back from a lost season
-    private static FormClassifier.History history(Player player, List<GameLog> lastSeason) {
-        if (!lastSeason.isEmpty()) {
-            return FormClassifier.History.PLAYED_LAST_SEASON;
-        }
-        return Integer.valueOf(0).equals(player.experienceYears())
-                ? FormClassifier.History.ROOKIE
-                : FormClassifier.History.RETURNING;
     }
 }

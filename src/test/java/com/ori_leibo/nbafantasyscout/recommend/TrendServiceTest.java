@@ -5,6 +5,7 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 
 import com.ori_leibo.nbafantasyscout.TestcontainersConfiguration;
 import com.ori_leibo.nbafantasyscout.domain.GameLog;
+import com.ori_leibo.nbafantasyscout.domain.LeagueScoring;
 import com.ori_leibo.nbafantasyscout.domain.Player;
 import com.ori_leibo.nbafantasyscout.domain.TrendingSnapshot;
 import com.ori_leibo.nbafantasyscout.persistence.GameLogRepository;
@@ -38,6 +39,7 @@ import org.springframework.context.annotation.Import;
 class TrendServiceTest {
 
     private static final int SEASON = 2027;
+    private static final LeagueScoring CATEGORIES = new LeagueScoring.Categories();
 
     @Autowired
     private PlayerRepository players;
@@ -67,7 +69,7 @@ class TrendServiceTest {
                 snapshot(1, TrendingSnapshot.Type.ADD, 9000, "2026-10-27T06:00:00Z"),
                 snapshot(2, TrendingSnapshot.Type.DROP, 400, "2026-10-27T06:00:00Z")));
 
-        Map<String, PlayerForm> forms = service().formOfAllPlayers().stream()
+        Map<String, PlayerForm> forms = service().formOfAllPlayers(CATEGORIES).stream()
                 .collect(Collectors.toMap(form -> form.player().name(), form -> form));
 
         assertEquals(4, forms.size(), "the waived player has no team and is left out");
@@ -97,7 +99,7 @@ class TrendServiceTest {
         players.saveAllAndFlush(List.of(player(1, "Star", "LAL", 8), player(2, "Rookie", "SAS", 0)));
         upsert.upsert(1, games(2026, 1, 10, 36, 30));                                  // last season only
 
-        List<PlayerForm> forms = service().formOfAllPlayers();
+        List<PlayerForm> forms = service().formOfAllPlayers(CATEGORIES);
 
         // no league to score against: no value, no trend, no crash
         assertEquals(2, forms.size());
@@ -110,9 +112,10 @@ class TrendServiceTest {
 
     // window 3, 5 baseline games, 15 minutes; hot at 0.15, high value from 1; league = 15+ minutes
     private TrendService service() {
-        return new TrendService(players, gameLogs, snapshots, new TrendCalculator(3, 5, 15),
-                new HotStreakScoring(0.4, 0.3, 0.3), new FormClassifier(new HotStreakScoring(0.4, 0.3, 0.3), 0.15, 1, 18, 0.15),
-                SEASON, 15, 0.5);
+        HotStreakScoring hotScoring = new HotStreakScoring(0.4, 0.3, 0.3);
+        SeasonData seasonData = new SeasonData(players, gameLogs, snapshots, new TrendCalculator(3, 5, 15), hotScoring,
+                SEASON, 15);
+        return new TrendService(seasonData, new FormClassifier(hotScoring, 0.15, 1, 18, 0.15), 0.5);
     }
 
     private static TrendingSnapshotEntity snapshot(long playerId, TrendingSnapshot.Type type, int count, String at) {

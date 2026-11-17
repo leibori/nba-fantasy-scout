@@ -3,6 +3,7 @@ package com.ori_leibo.nbafantasyscout.demo;
 import com.ori_leibo.nbafantasyscout.client.NbaDataClient;
 import com.ori_leibo.nbafantasyscout.config.ScoutProperties;
 import com.ori_leibo.nbafantasyscout.domain.GameLog;
+import com.ori_leibo.nbafantasyscout.domain.LeagueScoring;
 import com.ori_leibo.nbafantasyscout.domain.Player;
 import com.ori_leibo.nbafantasyscout.persistence.GameLogEntity;
 import com.ori_leibo.nbafantasyscout.persistence.GameLogRepository;
@@ -108,7 +109,7 @@ class DemoRunner implements CommandLineRunner {
         }
 
         System.out.println("\n=== 4. Form of every rostered player (TrendService)");
-        List<TrendService.PlayerForm> forms = trendService.formOfAllPlayers();
+        List<TrendService.PlayerForm> forms = trendService.formOfAllPlayers(new LeagueScoring.Categories());
         Map<FormClassifier.Form, Long> byForm = forms.stream()
                 .collect(Collectors.groupingBy(TrendService.PlayerForm::form, TreeMap::new, Collectors.counting()));
         System.out.println("  " + byForm);
