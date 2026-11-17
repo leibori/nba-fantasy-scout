@@ -10,6 +10,7 @@ import com.ori_leibo.nbafantasyscout.persistence.PlayerEntity;
 import com.ori_leibo.nbafantasyscout.persistence.PlayerRepository;
 import com.ori_leibo.nbafantasyscout.persistence.TrendingSnapshotEntity;
 import com.ori_leibo.nbafantasyscout.persistence.TrendingSnapshotRepository;
+import com.ori_leibo.nbafantasyscout.trend.CategoryValueScoring;
 import com.ori_leibo.nbafantasyscout.trend.FormClassifier;
 import com.ori_leibo.nbafantasyscout.trend.ScoringStrategy;
 import com.ori_leibo.nbafantasyscout.trend.Trend;
@@ -102,7 +103,7 @@ public class TrendService {
                 .toList();
         Optional<ValueScoring> valueScoring = league.isEmpty()
                 ? Optional.empty()
-                : Optional.of(new ValueScoring(league, percentageWeight));
+                : Optional.of(new CategoryValueScoring(league, percentageWeight));
         Map<Long, TrendingSnapshot> crowdByPlayer = latestCrowd();
 
         List<PlayerForm> forms = new ArrayList<>();

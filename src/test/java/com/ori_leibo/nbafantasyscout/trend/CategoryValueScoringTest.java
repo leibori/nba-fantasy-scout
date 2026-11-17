@@ -20,7 +20,7 @@ class ValueScoringTest {
     private static final StatLine HIGH = line(6, 10, 3, 4, 4, 8, 6, 1.5, 0.9, 3, 19);
     private static final List<StatLine> LEAGUE = List.of(LOW, MID, HIGH);
 
-    private final ValueScoring scoring = new ValueScoring(LEAGUE, 1.0);
+    private final CategoryValueScoring scoring = new CategoryValueScoring(LEAGUE, 1.0);
 
     @Test
     void averagePlayerIsWorthZeroAndBetterPlayersMore() {
@@ -49,8 +49,8 @@ class ValueScoringTest {
     void percentageWeightScalesOnlyTheShootingCategories() {
         StatLine sharpShooter = line(8, 10, 2, 4, 4, 6, 4, 1.0, 0.6, 2, 15);
 
-        double full = new ValueScoring(LEAGUE, 1.0).score(sharpShooter);
-        double half = new ValueScoring(LEAGUE, 0.5).score(sharpShooter);
+        double full = new CategoryValueScoring(LEAGUE, 1.0).score(sharpShooter);
+        double half = new CategoryValueScoring(LEAGUE, 0.5).score(sharpShooter);
 
         // every counting stat equals MID, so the whole value comes from FG% and FT%
         assertEquals(full / 2, half, 1e-9);
@@ -58,6 +58,6 @@ class ValueScoringTest {
 
     @Test
     void identicalLeagueGivesZeroInsteadOfNaN() {
-        assertEquals(0, new ValueScoring(List.of(MID, MID), 1.0).score(HIGH));
+        assertEquals(0, new CategoryValueScoring(List.of(MID, MID), 1.0).score(HIGH));
     }
 }
