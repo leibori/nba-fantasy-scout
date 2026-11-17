@@ -7,7 +7,7 @@ import com.ori_leibo.nbafantasyscout.domain.StatLine;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 
-class ValueScoringTest {
+class CategoryValueScoringTest {
 
     // per-game line: FGM/FGA, 3PM, FTM/FTA, REB, AST, STL, BLK, TO, PTS
     private static StatLine line(double fgm, double fga, double threes, double ftm, double fta,

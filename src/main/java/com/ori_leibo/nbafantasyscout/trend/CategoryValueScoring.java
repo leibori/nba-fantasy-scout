@@ -55,7 +55,7 @@ public class CategoryValueScoring implements ValueScoring {
     }
 
     // population standard deviation: the league is the whole population, not a sample of it
-    private static double[] meanAndStdDev(List<StatLine> league, ToDoubleFunction<StatLine> measure) {
+    static double[] meanAndStdDev(List<StatLine> league, ToDoubleFunction<StatLine> measure) {
         double mean = league.stream().mapToDouble(measure).average().orElseThrow();
         double variance = league.stream().mapToDouble(measure).map(v -> (v - mean) * (v - mean)).average().orElseThrow();
         return new double[] {mean, Math.sqrt(variance)};
