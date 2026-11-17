@@ -15,24 +15,26 @@ public class FormClassifier {
     /** What the player did before this season; matters only while he has no trend yet. */
     public enum History { PLAYED_LAST_SEASON, ROOKIE, RETURNING }
 
-    private final ScoringStrategy hotScoring;
     private final double hotThreshold;
     private final double highValue;
     private final double earlyColdMinMinutes;
     private final double earlyColdMinMinutesDrop;
 
     /** {@code earlyColdMinMinutesDrop} is a share: 0.15 = recent minutes at least 15% below the baseline. */
-    public FormClassifier(ScoringStrategy hotScoring, double hotThreshold, double highValue,
-                          double earlyColdMinMinutes, double earlyColdMinMinutesDrop) {
-        this.hotScoring = hotScoring;
+    public FormClassifier(double hotThreshold, double highValue, double earlyColdMinMinutes,
+                          double earlyColdMinMinutesDrop) {
         this.hotThreshold = hotThreshold;
         this.highValue = highValue;
         this.earlyColdMinMinutes = earlyColdMinMinutes;
         this.earlyColdMinMinutesDrop = earlyColdMinMinutesDrop;
     }
 
-    /** {@code value} is this season's value, empty when the player has no games yet. */
-    public Form classify(Optional<Trend> trend, OptionalDouble value, History history) {
+    /**
+     * {@code hotScore} is the trend's hot score, present exactly when {@code trend} is (passed in, not computed here,
+     * so the label and the score shown next to it can't disagree); {@code value} is this season's value,
+     * empty when the player has no games yet.
+     */
+    public Form classify(Optional<Trend> trend, OptionalDouble hotScore, OptionalDouble value, History history) {
         boolean high = value.isPresent() && value.getAsDouble() >= highValue;
         if (trend.isEmpty()) {
             if (!high) {
@@ -47,7 +49,7 @@ public class FormClassifier {
         }
 
         Trend current = trend.get();
-        double score = hotScoring.score(current);
+        double score = hotScore.orElseThrow(() -> new IllegalArgumentException("A trend without a hot score"));
         boolean early = current.provisional();
         if (score >= hotThreshold && (!early || high)) {
             return early ? Form.EARLY_HOT : Form.HOT;

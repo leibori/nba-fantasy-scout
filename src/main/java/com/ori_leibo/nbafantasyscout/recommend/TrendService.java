@@ -49,7 +49,10 @@ public class TrendService {
                     OptionalDouble value = season.line() == null || valueScoring.isEmpty()
                             ? OptionalDouble.empty()
                             : OptionalDouble.of(valueScoring.get().score(season.line()));
-                    FormClassifier.Form form = classifier.classify(Optional.ofNullable(season.trend()), value,
+                    OptionalDouble hotScore = season.hotScore() == null
+                            ? OptionalDouble.empty()
+                            : OptionalDouble.of(season.hotScore());
+                    FormClassifier.Form form = classifier.classify(Optional.ofNullable(season.trend()), hotScore, value,
                             season.history());
                     return new PlayerForm(season.player(), season.gamesThisSeason(), season.trend(), season.hotScore(),
                             value.isPresent() ? value.getAsDouble() : null,

@@ -112,10 +112,9 @@ class TrendServiceTest {
 
     // window 3, 5 baseline games, 15 minutes; hot at 0.15, high value from 1; league = 15+ minutes
     private TrendService service() {
-        HotStreakScoring hotScoring = new HotStreakScoring(0.4, 0.3, 0.3);
-        SeasonData seasonData = new SeasonData(players, gameLogs, snapshots, new TrendCalculator(3, 5, 15), hotScoring,
-                SEASON, 15);
-        return new TrendService(seasonData, new FormClassifier(hotScoring, 0.15, 1, 18, 0.15), 0.5);
+        SeasonData seasonData = new SeasonData(players, gameLogs, snapshots, new TrendCalculator(3, 5, 15),
+                new HotStreakScoring(0.4, 0.3, 0.3), SEASON, 15);
+        return new TrendService(seasonData, new FormClassifier(0.15, 1, 18, 0.15), 0.5);
     }
 
     private static TrendingSnapshotEntity snapshot(long playerId, TrendingSnapshot.Type type, int count, String at) {

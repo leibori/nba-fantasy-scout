@@ -146,9 +146,9 @@ public class ScoutConfig {
     }
 
     @Bean
-    FormClassifier formClassifier(HotStreakScoring hotStreakScoring, ScoutProperties properties) {
+    FormClassifier formClassifier(ScoutProperties properties) {
         ScoutProperties.Trend trend = properties.trend();
-        return new FormClassifier(hotStreakScoring, trend.hotThreshold(), trend.highValue(), trend.earlyColdMinMinutes(),
+        return new FormClassifier(trend.hotThreshold(), trend.highValue(), trend.earlyColdMinMinutes(),
                 trend.earlyColdMinMinutesDrop());
     }
 
