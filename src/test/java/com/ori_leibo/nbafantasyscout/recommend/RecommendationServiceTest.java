@@ -3,16 +3,19 @@ package com.ori_leibo.nbafantasyscout.recommend;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.ori_leibo.nbafantasyscout.domain.LeagueScoring;
 import com.ori_leibo.nbafantasyscout.domain.Player;
+import com.ori_leibo.nbafantasyscout.domain.PointStat;
 import com.ori_leibo.nbafantasyscout.domain.StatCategory;
 import com.ori_leibo.nbafantasyscout.domain.StatLine;
 import com.ori_leibo.nbafantasyscout.recommend.TrendService.PlayerForm;
 import com.ori_leibo.nbafantasyscout.trend.FormClassifier.Form;
 import com.ori_leibo.nbafantasyscout.trend.Trend;
 import java.util.List;
+import java.util.Map;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -25,10 +28,11 @@ class RecommendationServiceTest {
     @Mock
     private TrendService trends;
     private RecommendationService recommendations;
+    private static final LeagueScoring.Points POINTS = new LeagueScoring.Points(Map.of(PointStat.PTS, 1.0));
 
     @BeforeEach
     void setUp() {
-        recommendations = new RecommendationService(trends, new LeagueScoring.Categories());
+        recommendations = new RecommendationService(trends, LeagueScoring.Format.CATEGORIES, POINTS);
     }
 
     private static StatLine blocks(double blocks) {
@@ -72,5 +76,14 @@ class RecommendationServiceTest {
 
         assertEquals(1L, recommendations.player(1).orElseThrow().player().id());
         assertTrue(recommendations.player(99).isEmpty());
+    }
+
+    @Test
+    void hotUsesTheRequestedFormatAndOtherwiseTheDefault() {
+        recommendations.hot(10, LeagueScoring.Format.POINTS);
+        recommendations.hot(10);
+
+        verify(trends).formOfAllPlayers(POINTS);
+        verify(trends).formOfAllPlayers(new LeagueScoring.Categories());
     }
 }

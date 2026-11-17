@@ -7,6 +7,7 @@ import com.ori_leibo.nbafantasyscout.TestcontainersConfiguration;
 import com.ori_leibo.nbafantasyscout.domain.GameLog;
 import com.ori_leibo.nbafantasyscout.domain.LeagueScoring;
 import com.ori_leibo.nbafantasyscout.domain.Player;
+import com.ori_leibo.nbafantasyscout.domain.PointStat;
 import com.ori_leibo.nbafantasyscout.domain.TrendingSnapshot;
 import com.ori_leibo.nbafantasyscout.persistence.GameLogRepository;
 import com.ori_leibo.nbafantasyscout.persistence.GameLogUpsert;
@@ -40,6 +41,9 @@ class TrendServiceTest {
 
     private static final int SEASON = 2027;
     private static final LeagueScoring CATEGORIES = new LeagueScoring.Categories();
+    private static final LeagueScoring POINTS = new LeagueScoring.Points(Map.of(
+            PointStat.PTS, 1.0, PointStat.REB, 1.2, PointStat.AST, 1.5, PointStat.STL, 3.0, PointStat.BLK, 3.0,
+            PointStat.TO, -1.0));
 
     @Autowired
     private PlayerRepository players;
@@ -110,11 +114,29 @@ class TrendServiceTest {
         });
     }
 
-    // window 3, 5 baseline games, 15 minutes; hot at 0.15, high value from 1; league = 15+ minutes
+    @Test
+    void pointsLeagueScoresFantasyPointsAgainstItsOwnHighValue() {
+        players.saveAllAndFlush(List.of(player(1, "Big Rookie", "DUK", 0), player(2, "Bench Guard", "BOS", 3)));
+        upsert.upsert(1, games(2026, 10, 3, 34, 24));
+        upsert.upsert(2, games(2026, 10, 3, 16, 4));
+
+        Map<String, PlayerForm> forms = service().formOfAllPlayers(POINTS).stream()
+                .collect(Collectors.toMap(form -> form.player().name(), form -> form));
+
+        // two players in the league: one z-score each, +1 and -1
+        assertEquals(1, forms.get("Big Rookie").value(), 1e-9);
+        assertEquals(-1, forms.get("Bench Guard").value(), 1e-9);
+        assertEquals(Form.NEUTRAL, forms.get("Big Rookie").form(), "+1 is below the points high value of 1.5");
+        assertEquals(Form.EARLY_HOT, service().formOfAllPlayers(CATEGORIES).stream()
+                .filter(form -> form.player().id() == 1).findFirst().orElseThrow().form(),
+                "the same rookie is high value in 9-cat, against its threshold of 1");
+    }
+
+    // window 3, 5 baseline games, 15 minutes; hot at 0.15; high value 1 (9-cat) and 1.5 (points); league = 15+ minutes
     private TrendService service() {
         SeasonData seasonData = new SeasonData(players, gameLogs, snapshots, new TrendCalculator(3, 5, 15),
                 new HotStreakScoring(0.4, 0.3, 0.3), SEASON, 15);
-        return new TrendService(seasonData, new FormClassifier(0.15, 1, 18, 0.15), 0.5);
+        return new TrendService(seasonData, new FormClassifier(0.15, 18, 0.15), 0.5, 1, 1.5);
     }
 
     private static TrendingSnapshotEntity snapshot(long playerId, TrendingSnapshot.Type type, int count, String at) {

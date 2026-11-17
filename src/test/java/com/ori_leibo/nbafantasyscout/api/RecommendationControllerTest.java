@@ -5,6 +5,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import com.ori_leibo.nbafantasyscout.domain.LeagueScoring;
 import com.ori_leibo.nbafantasyscout.domain.Player;
 import com.ori_leibo.nbafantasyscout.domain.StatCategory;
 import com.ori_leibo.nbafantasyscout.domain.StatLine;
@@ -56,6 +57,15 @@ class RecommendationControllerTest {
     }
 
     @Test
+    void scoringPicksTheFormatCaseInsensitively() throws Exception {
+        when(recommendations.hot(10, LeagueScoring.Format.POINTS)).thenReturn(List.of(WALTER));
+
+        mvc.perform(get("/api/v1/recommendations/hot").param("scoring", "Points"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].name").value("Ja'Kobe Walter"));
+    }
+
+    @Test
     void categoryIsCaseInsensitive() throws Exception {
         when(recommendations.byCategory(StatCategory.BLK, 5)).thenReturn(List.of(new CategoryChange(WALTER, 1.25)));
 
@@ -74,5 +84,9 @@ class RecommendationControllerTest {
 
         mvc.perform(get("/api/v1/recommendations/hot").param("limit", "0"))
                 .andExpect(status().isBadRequest());
+
+        mvc.perform(get("/api/v1/recommendations/hot").param("scoring", "roto"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.detail").value(org.hamcrest.Matchers.startsWith("Unknown scoring \"roto\"")));
     }
 }

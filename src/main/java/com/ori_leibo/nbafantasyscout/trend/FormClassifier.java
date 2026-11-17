@@ -16,26 +16,22 @@ public class FormClassifier {
     public enum History { PLAYED_LAST_SEASON, ROOKIE, RETURNING }
 
     private final double hotThreshold;
-    private final double highValue;
     private final double earlyColdMinMinutes;
     private final double earlyColdMinMinutesDrop;
 
     /** {@code earlyColdMinMinutesDrop} is a share: 0.15 = recent minutes at least 15% below the baseline. */
-    public FormClassifier(double hotThreshold, double highValue, double earlyColdMinMinutes,
-                          double earlyColdMinMinutesDrop) {
+    public FormClassifier(double hotThreshold, double earlyColdMinMinutes, double earlyColdMinMinutesDrop) {
         this.hotThreshold = hotThreshold;
-        this.highValue = highValue;
         this.earlyColdMinMinutes = earlyColdMinMinutes;
         this.earlyColdMinMinutesDrop = earlyColdMinMinutesDrop;
     }
 
     /**
      * {@code hotScore} is the trend's hot score, present exactly when {@code trend} is (passed in, not computed here,
-     * so the label and the score shown next to it can't disagree); {@code value} is this season's value,
-     * empty when the player has no games yet.
+     * so the label and the score shown next to it can't disagree); {@code high} = this season's value reaches the
+     * league format's high-value threshold (false without games).
      */
-    public Form classify(Optional<Trend> trend, OptionalDouble hotScore, OptionalDouble value, History history) {
-        boolean high = value.isPresent() && value.getAsDouble() >= highValue;
+    public Form classify(Optional<Trend> trend, OptionalDouble hotScore, boolean high, History history) {
         if (trend.isEmpty()) {
             if (!high) {
                 return Form.NEUTRAL;

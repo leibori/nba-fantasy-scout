@@ -2,8 +2,10 @@ package com.ori_leibo.nbafantasyscout.api;
 
 import com.ori_leibo.nbafantasyscout.api.dto.CategoryChangeResponse;
 import com.ori_leibo.nbafantasyscout.api.dto.PlayerFormResponse;
+import com.ori_leibo.nbafantasyscout.domain.LeagueScoring;
 import com.ori_leibo.nbafantasyscout.domain.StatCategory;
 import com.ori_leibo.nbafantasyscout.recommend.RecommendationService;
+import com.ori_leibo.nbafantasyscout.recommend.TrendService.PlayerForm;
 import io.swagger.v3.oas.annotations.Operation;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
@@ -26,29 +28,34 @@ public class RecommendationController {
         this.recommendations = recommendations;
     }
 
-    @Operation(summary = "Rising players (hot, early hot, returning), best value first")
+    @Operation(summary = "Rising players (hot, early hot, returning), best value first; "
+            + "scoring = points or categories, the configured format when left out")
     @GetMapping("/hot")
-    public List<PlayerFormResponse> hot(@RequestParam(defaultValue = "10") @Min(1) @Max(100) int limit) {
-        return recommendations.hot(limit).stream().map(PlayerFormResponse::from).toList();
+    public List<PlayerFormResponse> hot(@RequestParam(defaultValue = "10") @Min(1) @Max(100) int limit,
+                                        @RequestParam(required = false) String scoring) {
+        List<PlayerForm> forms = scoring == null
+                ? recommendations.hot(limit)
+                : recommendations.hot(limit, parse(LeagueScoring.Format.class, scoring, "scoring"));
+        return forms.stream().map(PlayerFormResponse::from).toList();
     }
 
     @Operation(summary = "Biggest improvement in one Yahoo category: FG_PCT, FT_PCT, THREES, PTS, REB, AST, STL, BLK, TO")
     @GetMapping("/{category}")
     public List<CategoryChangeResponse> byCategory(@PathVariable String category,
                                                    @RequestParam(defaultValue = "10") @Min(1) @Max(100) int limit) {
-        StatCategory parsed = parse(category);
+        StatCategory parsed = parse(StatCategory.class, category, "category");
         return recommendations.byCategory(parsed, limit).stream()
                 .map(change -> CategoryChangeResponse.from(parsed.name(), change))
                 .toList();
     }
 
-    // case-insensitive, so /recommendations/blk works too
-    private static StatCategory parse(String category) {
+    // case-insensitive, so /recommendations/blk and ?scoring=Points work too
+    private static <E extends Enum<E>> E parse(Class<E> type, String value, String what) {
         try {
-            return StatCategory.valueOf(category.toUpperCase(Locale.ROOT));
+            return Enum.valueOf(type, value.toUpperCase(Locale.ROOT));
         } catch (IllegalArgumentException e) {
-            throw new IllegalArgumentException("Unknown category \"%s\"; use one of %s"
-                    .formatted(category, Arrays.toString(StatCategory.values())));
+            throw new IllegalArgumentException("Unknown %s \"%s\"; use one of %s"
+                    .formatted(what, value, Arrays.toString(type.getEnumConstants())));
         }
     }
 }

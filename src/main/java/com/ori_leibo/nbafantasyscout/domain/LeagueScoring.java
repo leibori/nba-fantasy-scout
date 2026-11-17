@@ -5,6 +5,9 @@ import java.util.Map;
 /** How a fantasy league turns stats into wins: nine categories won one by one, or a single points total. */
 public sealed interface LeagueScoring {
 
+    /** The format's name, for config and {@code ?scoring=}; a {@link Points} league also needs its point values. */
+    enum Format { CATEGORIES, POINTS }
+
     record Categories() implements LeagueScoring {
     }
 

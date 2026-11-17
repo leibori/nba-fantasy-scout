@@ -22,11 +22,17 @@ public class TrendService {
     private final SeasonData seasonData;
     private final FormClassifier classifier;
     private final double percentageWeight;
+    private final double categoriesHighValue;
+    private final double pointsHighValue;
 
-    public TrendService(SeasonData seasonData, FormClassifier classifier, double percentageWeight) {
+    /** The high values are each format's "good right now" threshold: the formats score on different scales. */
+    public TrendService(SeasonData seasonData, FormClassifier classifier, double percentageWeight,
+                        double categoriesHighValue, double pointsHighValue) {
         this.seasonData = seasonData;
         this.classifier = classifier;
         this.percentageWeight = percentageWeight;
+        this.categoriesHighValue = categoriesHighValue;
+        this.pointsHighValue = pointsHighValue;
     }
 
     /**
@@ -44,6 +50,10 @@ public class TrendService {
         Optional<ValueScoring> valueScoring = data.league().isEmpty()
                 ? Optional.empty()
                 : Optional.of(valueScoring(scoring, data.league()));
+        double highValue = switch (scoring) {
+            case LeagueScoring.Categories categories -> categoriesHighValue;
+            case LeagueScoring.Points points -> pointsHighValue;
+        };
         return data.players().stream()
                 .map(season -> {
                     OptionalDouble value = season.line() == null || valueScoring.isEmpty()
@@ -52,7 +62,8 @@ public class TrendService {
                     OptionalDouble hotScore = season.hotScore() == null
                             ? OptionalDouble.empty()
                             : OptionalDouble.of(season.hotScore());
-                    FormClassifier.Form form = classifier.classify(Optional.ofNullable(season.trend()), hotScore, value,
+                    boolean high = value.isPresent() && value.getAsDouble() >= highValue;
+                    FormClassifier.Form form = classifier.classify(Optional.ofNullable(season.trend()), hotScore, high,
                             season.history());
                     return new PlayerForm(season.player(), season.gamesThisSeason(), season.trend(), season.hotScore(),
                             value.isPresent() ? value.getAsDouble() : null,

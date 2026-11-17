@@ -11,6 +11,7 @@ import com.ori_leibo.nbafantasyscout.persistence.GameLogUpsert;
 import com.ori_leibo.nbafantasyscout.persistence.PlayerEntity;
 import com.ori_leibo.nbafantasyscout.persistence.PlayerRepository;
 import com.ori_leibo.nbafantasyscout.persistence.TrendingSnapshotRepository;
+import com.ori_leibo.nbafantasyscout.recommend.RecommendationService;
 import com.ori_leibo.nbafantasyscout.recommend.TrendService;
 import com.ori_leibo.nbafantasyscout.sync.SyncService;
 import com.ori_leibo.nbafantasyscout.trend.FormClassifier;
@@ -48,12 +49,14 @@ class DemoRunner implements CommandLineRunner {
     private final TrendCalculator trendCalculator;
     private final HotStreakScoring hotStreakScoring;
     private final TrendService trendService;
+    private final RecommendationService recommendations;
     private final int season;
     private int failures;
 
     DemoRunner(SyncService sync, NbaDataClient espn, PlayerRepository players, GameLogRepository gameLogs,
                GameLogUpsert upsert, TrendingSnapshotRepository snapshots, TrendCalculator trendCalculator,
-               HotStreakScoring hotStreakScoring, TrendService trendService, ScoutProperties properties) {
+               HotStreakScoring hotStreakScoring, TrendService trendService, RecommendationService recommendations,
+               ScoutProperties properties) {
         this.sync = sync;
         this.espn = espn;
         this.players = players;
@@ -63,6 +66,7 @@ class DemoRunner implements CommandLineRunner {
         this.trendCalculator = trendCalculator;
         this.hotStreakScoring = hotStreakScoring;
         this.trendService = trendService;
+        this.recommendations = recommendations;
         this.season = properties.sync().season();
     }
 
@@ -108,8 +112,9 @@ class DemoRunner implements CommandLineRunner {
                     t.baseline().points(), t.baseline().minutes(), hotStreakScoring.score(t)));
         }
 
-        System.out.println("\n=== 4. Form of every rostered player (TrendService)");
-        List<TrendService.PlayerForm> forms = trendService.formOfAllPlayers(new LeagueScoring.Categories());
+        LeagueScoring scoring = recommendations.defaultScoring();
+        System.out.println("\n=== 4. Form of every rostered player (TrendService), " + scoring);
+        List<TrendService.PlayerForm> forms = trendService.formOfAllPlayers(scoring);
         Map<FormClassifier.Form, Long> byForm = forms.stream()
                 .collect(Collectors.groupingBy(TrendService.PlayerForm::form, TreeMap::new, Collectors.counting()));
         System.out.println("  " + byForm);

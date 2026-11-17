@@ -11,14 +11,14 @@ import org.junit.jupiter.api.Test;
 
 class FormClassifierTest {
 
-    // hot at +/-0.15, high value from 3, early cold needs 18 baseline minutes and a 15% minutes drop
-    private static final FormClassifier CLASSIFIER = new FormClassifier(0.15, 3, 18, 0.15);
+    // hot at +/-0.15, early cold needs 18 baseline minutes and a 15% minutes drop
+    private static final FormClassifier CLASSIFIER = new FormClassifier(0.15, 18, 0.15);
 
     private static final StatLine STARTER = line(30);
     private static final Optional<Trend> ESTABLISHED = Optional.of(new Trend(STARTER, STARTER, Trend.Baseline.THIS_SEASON));
     private static final Optional<Trend> EARLY = Optional.of(new Trend(STARTER, STARTER, Trend.Baseline.LAST_SEASON));
-    private static final OptionalDouble HIGH_VALUE = OptionalDouble.of(4);
-    private static final OptionalDouble LOW_VALUE = OptionalDouble.of(-1);
+    private static final boolean HIGH_VALUE = true;
+    private static final boolean LOW_VALUE = false;
     private static final OptionalDouble RISING = OptionalDouble.of(0.3);
     private static final OptionalDouble FLAT = OptionalDouble.of(0.0);
     private static final OptionalDouble FALLING = OptionalDouble.of(-0.3);
@@ -61,6 +61,5 @@ class FormClassifierTest {
         assertEquals(Form.RETURNING, CLASSIFIER.classify(Optional.empty(), noScore, HIGH_VALUE, History.RETURNING));
         assertEquals(Form.GOOD, CLASSIFIER.classify(Optional.empty(), noScore, HIGH_VALUE, History.PLAYED_LAST_SEASON));
         assertEquals(Form.NEUTRAL, CLASSIFIER.classify(Optional.empty(), noScore, LOW_VALUE, History.ROOKIE));
-        assertEquals(Form.NEUTRAL, CLASSIFIER.classify(Optional.empty(), noScore, OptionalDouble.empty(), History.ROOKIE));
     }
 }

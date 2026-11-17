@@ -40,7 +40,6 @@ scout:
     min-baseline-games: 5      # fewer earlier games this season -> last season is the (provisional) baseline
     min-minutes: 15            # per game, in the recent or the baseline period
     hot-threshold: 0.15        # hot score above +0.15 = hot, below -0.15 = cold
-    high-value: 1.0            # value (sum of 9-cat z-scores) that counts as "good right now"; about a top-100 player
     early-cold-min-minutes: 18 # early in a season, only a player with this many baseline minutes can be cold
     early-cold-min-minutes-drop: 0.15 # ... and only when his minutes fell at least 15% (fewer shots alone is noise)
     league-min-minutes: 15     # players averaging fewer minutes are left out of the value league
@@ -49,6 +48,18 @@ scout:
     minutes-weight: 0.4
     field-goals-attempted-weight: 0.3
     opportunity-weight: 0.3
+  scoring:
+    format: points             # league format when no league is given: points | categories (?scoring= overrides it)
+    point-values:              # points per stat in a points league (a typical Yahoo one)
+      PTS: 1
+      REB: 1.2
+      AST: 1.5
+      STL: 3
+      BLK: 3
+      TO: -1
+    high-value:                # value that counts as "good right now", about a top-100 player; scales differ by format
+      categories: 1.0          # sum of 9 z-scores; 100th player 1.14 (Nov 2026)
+      points: 0.3              # one z-score of fantasy points per game; 100th player 0.32 (Nov 2026)
 
 logging:
   pattern:

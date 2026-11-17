@@ -148,8 +148,7 @@ public class ScoutConfig {
     @Bean
     FormClassifier formClassifier(ScoutProperties properties) {
         ScoutProperties.Trend trend = properties.trend();
-        return new FormClassifier(trend.hotThreshold(), trend.highValue(), trend.earlyColdMinMinutes(),
-                trend.earlyColdMinMinutesDrop());
+        return new FormClassifier(trend.hotThreshold(), trend.earlyColdMinMinutes(), trend.earlyColdMinMinutesDrop());
     }
 
     @Bean
@@ -161,11 +160,14 @@ public class ScoutConfig {
 
     @Bean
     TrendService trendService(SeasonData seasonData, FormClassifier formClassifier, ScoutProperties properties) {
-        return new TrendService(seasonData, formClassifier, properties.trend().percentageWeight());
+        ScoutProperties.Scoring.HighValue highValue = properties.scoring().highValue();
+        return new TrendService(seasonData, formClassifier, properties.trend().percentageWeight(),
+                highValue.categories(), highValue.points());
     }
 
     @Bean
-    RecommendationService recommendationService(TrendService trendService) {
-        return new RecommendationService(trendService, new LeagueScoring.Categories());
+    RecommendationService recommendationService(TrendService trendService, ScoutProperties properties) {
+        ScoutProperties.Scoring scoring = properties.scoring();
+        return new RecommendationService(trendService, scoring.format(), new LeagueScoring.Points(scoring.pointValues()));
     }
 }

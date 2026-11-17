@@ -18,11 +18,18 @@ public class RecommendationService {
     private static final Set<Form> RISING = EnumSet.of(Form.HOT, Form.EARLY_HOT, Form.RETURNING);
 
     private final TrendService trends;
-    private final LeagueScoring leagueScoring;
+    private final LeagueScoring.Format defaultFormat;
+    private final LeagueScoring.Points points;
 
-    public RecommendationService(TrendService trends, LeagueScoring leagueScoring) {
+    /** {@code points}: the point values used whenever the points format is asked for. */
+    public RecommendationService(TrendService trends, LeagueScoring.Format defaultFormat, LeagueScoring.Points points) {
         this.trends = trends;
-        this.leagueScoring = leagueScoring;
+        this.defaultFormat = defaultFormat;
+        this.points = points;
+    }
+
+    public LeagueScoring defaultScoring() {
+        return scoring(defaultFormat);
     }
 
     /** One player's change in one category vs. his baseline; positive = better (fewer turnovers counts as better). */
@@ -34,7 +41,11 @@ public class RecommendationService {
      * a rookie has no baseline and so no hot score, but every rising player has a value.
      */
     public List<PlayerForm> hot(int limit) {
-        return trends.formOfAllPlayers(leagueScoring).stream()
+        return hot(limit, defaultFormat);
+    }
+
+    public List<PlayerForm> hot(int limit, LeagueScoring.Format format) {
+        return trends.formOfAllPlayers(scoring(format)).stream()
                 .filter(form -> RISING.contains(form.form()))
                 .sorted(Comparator.comparing(PlayerForm::value, Comparator.nullsLast(Comparator.reverseOrder())))
                 .limit(limit)
@@ -44,7 +55,7 @@ public class RecommendationService {
     /** Biggest improvement in one category; players without a trend (no baseline yet) are left out. */
     public List<CategoryChange> byCategory(StatCategory category, int limit) {
         ScoringStrategy scoring = new CategoryScoring(category);
-        return trends.formOfAllPlayers(leagueScoring).stream()
+        return trends.formOfAllPlayers(defaultScoring()).stream()
                 .filter(form -> form.trend() != null)
                 .map(form -> new CategoryChange(form, scoring.score(form.trend())))
                 .sorted(Comparator.comparingDouble(CategoryChange::change).reversed())
@@ -54,8 +65,15 @@ public class RecommendationService {
 
     /** Empty when no rostered player has this ESPN id. */
     public Optional<PlayerForm> player(long playerId) {
-        return trends.formOfAllPlayers(leagueScoring).stream()
+        return trends.formOfAllPlayers(defaultScoring()).stream()
                 .filter(form -> form.player().id() == playerId)
                 .findFirst();
+    }
+
+    private LeagueScoring scoring(LeagueScoring.Format format) {
+        return switch (format) {
+            case CATEGORIES -> new LeagueScoring.Categories();
+            case POINTS -> points;
+        };
     }
 }
