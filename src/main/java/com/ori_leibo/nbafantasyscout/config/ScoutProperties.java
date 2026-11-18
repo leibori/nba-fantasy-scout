@@ -9,7 +9,7 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 /** Everything under {@code scout:} in application.yml, bound once at startup. */
 @ConfigurationProperties("scout")
 public record ScoutProperties(Espn espn, Sleeper sleeper, Http http, Sync sync, Matcher matcher, Trend trend, HotStreak hotStreak,
-                             Scoring scoring) {
+                             Scoring scoring, Roster roster) {
 
     public record Espn(String teamsBaseUrl, String gameLogBaseUrl, Duration timeout, int maxCallsPerSecond) {
     }
@@ -40,10 +40,19 @@ public record ScoutProperties(Espn espn, Sleeper sleeper, Http http, Sync sync, 
     public record HotStreak(double minutesWeight, double fieldGoalsAttemptedWeight, double opportunityWeight) {
     }
 
-    /** League format when no league is given, the points league's point values, and "good right now" per format. */
-    public record Scoring(LeagueScoring.Format format, Map<PointStat, Double> pointValues, HighValue highValue) {
+    /**
+     * League format when no league is given, the points league's point values, and per format: "good right now"
+     * and how much more value a free agent needs before dropping a player for him.
+     */
+    public record Scoring(LeagueScoring.Format format, Map<PointStat, Double> pointValues, PerFormat highValue,
+                          PerFormat dropGap) {
 
-        public record HighValue(double categories, double points) {
+        /** One threshold per league format; the formats score on different scales. */
+        public record PerFormat(double categories, double points) {
         }
+    }
+
+    /** {@code pickUpNow}: how many free agents the roster advice suggests picking up. */
+    public record Roster(int pickUpNow) {
     }
 }

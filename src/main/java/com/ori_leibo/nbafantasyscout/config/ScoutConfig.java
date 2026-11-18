@@ -17,6 +17,8 @@ import com.ori_leibo.nbafantasyscout.recommend.SeasonData;
 import com.ori_leibo.nbafantasyscout.recommend.TrendCacheRefresher;
 import com.ori_leibo.nbafantasyscout.recommend.TrendService;
 import com.ori_leibo.nbafantasyscout.roster.PlayerMatcher;
+import com.ori_leibo.nbafantasyscout.roster.RosterRules;
+import com.ori_leibo.nbafantasyscout.roster.RosterService;
 import com.ori_leibo.nbafantasyscout.sync.GameLogSync;
 import com.ori_leibo.nbafantasyscout.sync.SyncService;
 import com.ori_leibo.nbafantasyscout.sync.TrendingSync;
@@ -160,7 +162,7 @@ public class ScoutConfig {
 
     @Bean
     TrendService trendService(SeasonData seasonData, FormClassifier formClassifier, ScoutProperties properties) {
-        ScoutProperties.Scoring.HighValue highValue = properties.scoring().highValue();
+        ScoutProperties.Scoring.PerFormat highValue = properties.scoring().highValue();
         return new TrendService(seasonData, formClassifier, properties.trend().percentageWeight(),
                 highValue.categories(), highValue.points());
     }
@@ -169,5 +171,12 @@ public class ScoutConfig {
     RecommendationService recommendationService(TrendService trendService, ScoutProperties properties) {
         ScoutProperties.Scoring scoring = properties.scoring();
         return new RecommendationService(trendService, scoring.format(), new LeagueScoring.Points(scoring.pointValues()));
+    }
+
+    @Bean
+    RosterService rosterService(TrendService trendService, PlayerMatcher playerMatcher, ScoutProperties properties) {
+        ScoutProperties.Scoring.PerFormat dropGap = properties.scoring().dropGap();
+        return new RosterService(trendService, playerMatcher, new RosterRules(RosterRules.DEFAULT_ORDER),
+                dropGap.categories(), dropGap.points(), properties.roster().pickUpNow());
     }
 }

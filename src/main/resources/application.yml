@@ -60,6 +60,11 @@ scout:
     high-value:                # value that counts as "good right now", about a top-100 player; scales differ by format
       categories: 1.0          # sum of 9 z-scores; 100th player 1.14 (Nov 2026)
       points: 0.3              # one z-score of fantasy points per game; 100th player 0.32 (Nov 2026)
+    drop-gap:                  # value a free agent must add before dropping a player for him: ~40 ranks mid-table
+      categories: 1.5          # (no standard number exists; smaller differences are noise)
+      points: 0.5
+  roster:
+    pick-up-now: 10            # free agents suggested by the roster advice
 
 logging:
   pattern:

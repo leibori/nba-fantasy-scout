@@ -15,7 +15,7 @@ import java.util.Set;
 /** The read side of the API: rankings and single players, built from {@link TrendService}'s forms. */
 public class RecommendationService {
 
-    private static final Set<Form> RISING = EnumSet.of(Form.HOT, Form.EARLY_HOT, Form.RETURNING);
+    public static final Set<Form> RISING = EnumSet.of(Form.HOT, Form.EARLY_HOT, Form.RETURNING);
 
     private final TrendService trends;
     private final LeagueScoring.Format defaultFormat;
