@@ -41,10 +41,10 @@ public class RosterRules {
     // ESPN gives a status, not how long he is out: hold him unless even a free agent is clearly better
     // (a star stays, a weak injured player falls through to replaceWeak)
     static Optional<Recommendation> holdInjured(PlayerForm player, FreeAgents freeAgents) {
-        if (!isOut(player) || freeAgents.clearlyBetterThan(player).isPresent()) {
-            return Optional.empty();
+        if (isOut(player) && freeAgents.clearlyBetterThan(player).isEmpty()) {
+            return Optional.of(new Recommendation.Keep("Out, but no free agent is clearly better: hold until he's back"));
         }
-        return Optional.of(new Recommendation.Keep("Out, but no free agent is clearly better: hold until he's back"));
+        return Optional.empty();
     }
 
     // the crowd dropping him is evidence, judged against his stats: panic = hold, confirmed decline = swap
