@@ -7,9 +7,6 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface TrendingSnapshotRepository extends JpaRepository<TrendingSnapshotEntity, Long> {
 
-    // WHERE player_id = ? ORDER BY fetched_at ASC: one player's crowd history, oldest first
-    List<TrendingSnapshotEntity> findByPlayerIdOrderByFetchedAtAsc(long playerId);
-
     // ORDER BY fetched_at DESC LIMIT 1: any row of the latest sync, to learn its time
     Optional<TrendingSnapshotEntity> findFirstByOrderByFetchedAtDesc();
 
