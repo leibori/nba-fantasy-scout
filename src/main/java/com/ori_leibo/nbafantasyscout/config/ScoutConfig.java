@@ -122,9 +122,9 @@ public class ScoutConfig {
 
     @Bean
     GameLogSync gameLogSync(NbaDataClient nbaDataClient, GameLogUpsert gameLogUpsert, GameLogRepository gameLogs,
-                            Executor syncExecutor, ScoutProperties properties) {
-        return new GameLogSync(nbaDataClient, gameLogUpsert, gameLogs, syncExecutor,
-                properties.sync().season(), properties.sync().maxConsecutiveFailures());
+                            Executor syncExecutor, Clock clock, ScoutProperties properties) {
+        return new GameLogSync(nbaDataClient, gameLogUpsert, gameLogs, syncExecutor, clock,
+                properties.sync().maxConsecutiveFailures());
     }
 
     @Bean
@@ -165,9 +165,10 @@ public class ScoutConfig {
 
     @Bean
     SeasonData seasonData(PlayerRepository players, GameLogRepository gameLogs, TrendingSnapshotRepository snapshots,
-                          TrendCalculator trendCalculator, HotStreakScoring hotStreakScoring, ScoutProperties properties) {
-        return new SeasonData(players, gameLogs, snapshots, trendCalculator, hotStreakScoring,
-                properties.sync().season(), properties.trend().leagueMinMinutes());
+                          TrendCalculator trendCalculator, HotStreakScoring hotStreakScoring, Clock clock,
+                          ScoutProperties properties) {
+        return new SeasonData(players, gameLogs, snapshots, trendCalculator, hotStreakScoring, clock,
+                properties.trend().leagueMinMinutes());
     }
 
     @Bean
@@ -191,7 +192,7 @@ public class ScoutConfig {
     }
 
     @Bean
-    YahooLeagueService yahooLeagueService(YahooClient yahooClient, ScoutProperties properties) {
-        return new YahooLeagueService(yahooClient, properties.sync().season());
+    YahooLeagueService yahooLeagueService(YahooClient yahooClient, Clock clock) {
+        return new YahooLeagueService(yahooClient, clock);
     }
 }

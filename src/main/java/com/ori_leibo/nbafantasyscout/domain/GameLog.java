@@ -15,7 +15,11 @@ public record GameLog(
     private static final int FIRST_MONTH = 8;
 
     public int season() {
-        return gameDate.getMonthValue() >= FIRST_MONTH ? gameDate.getYear() + 1 : gameDate.getYear();
+        return seasonOf(gameDate);
+    }
+
+    public static int seasonOf(LocalDate date) {
+        return date.getMonthValue() >= FIRST_MONTH ? date.getYear() + 1 : date.getYear();
     }
 
     public static LocalDate seasonStart(int season) {

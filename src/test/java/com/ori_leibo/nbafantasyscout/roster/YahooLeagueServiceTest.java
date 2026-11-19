@@ -10,6 +10,9 @@ import static org.mockito.Mockito.when;
 import com.ori_leibo.nbafantasyscout.client.YahooClient;
 import com.ori_leibo.nbafantasyscout.client.YahooMapper;
 import com.ori_leibo.nbafantasyscout.domain.LeagueScoring;
+import java.time.Clock;
+import java.time.Instant;
+import java.time.ZoneOffset;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -20,7 +23,8 @@ import org.mockito.junit.jupiter.MockitoExtension;
 class YahooLeagueServiceTest {
 
     private static final long LEAGUE_ID = 246889;
-    private static final int SEASON = 2027; // ours: 2026-27, which Yahoo calls 2026
+    // a day in the 2026-27 season, which Yahoo calls 2026
+    private static final Clock CLOCK = Clock.fixed(Instant.parse("2026-11-01T12:00:00Z"), ZoneOffset.UTC);
     private static final List<YahooMapper.Team> TEAMS = List.of(
             new YahooMapper.Team("478.l.246889.t.1", "Ramat-Gan Eshet Chayil"),
             new YahooMapper.Team("478.l.246889.t.2", "Givaat Shmuel Rabbis"));
@@ -29,7 +33,7 @@ class YahooLeagueServiceTest {
     private YahooClient yahoo;
 
     private YahooLeagueService service() {
-        return new YahooLeagueService(yahoo, SEASON);
+        return new YahooLeagueService(yahoo, CLOCK);
     }
 
     private static YahooMapper.League league(int yahooSeason) {

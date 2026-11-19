@@ -21,8 +21,10 @@ import com.ori_leibo.nbafantasyscout.trend.FormClassifier.Form;
 import com.ori_leibo.nbafantasyscout.trend.HotStreakScoring;
 import com.ori_leibo.nbafantasyscout.trend.Trend;
 import com.ori_leibo.nbafantasyscout.trend.TrendCalculator;
+import java.time.Clock;
 import java.time.Instant;
 import java.time.LocalDate;
+import java.time.ZoneOffset;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -39,7 +41,8 @@ import org.springframework.context.annotation.Import;
 @Import({TestcontainersConfiguration.class, GameLogUpsert.class})
 class TrendServiceTest {
 
-    private static final int SEASON = 2027;
+    // a day in the 2026-27 season
+    private static final Clock CLOCK = Clock.fixed(Instant.parse("2026-11-01T12:00:00Z"), ZoneOffset.UTC);
     private static final LeagueScoring CATEGORIES = new LeagueScoring.Categories();
     private static final LeagueScoring POINTS = new LeagueScoring.Points(Map.of(
             PointStat.PTS, 1.0, PointStat.REB, 1.2, PointStat.AST, 1.5, PointStat.STL, 3.0, PointStat.BLK, 3.0,
@@ -135,7 +138,7 @@ class TrendServiceTest {
     // window 3, 5 baseline games, 15 minutes; hot at 0.15; high value 1 (9-cat) and 1.5 (points); league = 15+ minutes
     private TrendService service() {
         SeasonData seasonData = new SeasonData(players, gameLogs, snapshots, new TrendCalculator(3, 5, 15),
-                new HotStreakScoring(0.4, 0.3, 0.3), SEASON, 15);
+                new HotStreakScoring(0.4, 0.3, 0.3), CLOCK, 15);
         return new TrendService(seasonData, new FormClassifier(0.15, 18, 0.15), 0.5, 1, 1.5);
     }
 

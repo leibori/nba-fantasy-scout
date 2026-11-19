@@ -2,7 +2,10 @@ package com.ori_leibo.nbafantasyscout.roster;
 
 import com.ori_leibo.nbafantasyscout.client.YahooClient;
 import com.ori_leibo.nbafantasyscout.client.YahooMapper;
+import com.ori_leibo.nbafantasyscout.domain.GameLog;
 import com.ori_leibo.nbafantasyscout.domain.LeagueScoring;
+import java.time.Clock;
+import java.time.LocalDate;
 import java.util.List;
 
 /**
@@ -12,12 +15,11 @@ import java.util.List;
 public class YahooLeagueService {
 
     private final YahooClient yahoo;
-    private final int season;
+    private final Clock clock;
 
-    /** {@code season}: ours, the year the season ends. */
-    public YahooLeagueService(YahooClient yahoo, int season) {
+    public YahooLeagueService(YahooClient yahoo, Clock clock) {
         this.yahoo = yahoo;
-        this.season = season;
+        this.clock = clock;
     }
 
     /** {@code warnings}: stats the league scores that the values leave out. */
@@ -27,6 +29,7 @@ public class YahooLeagueService {
     /** Throws {@link IllegalArgumentException} with a message for the user when the league or team doesn't fit. */
     public LeagueTeam read(long leagueId, String teamName) {
         YahooMapper.League league = yahoo.league(leagueId);
+        int season = GameLog.seasonOf(LocalDate.now(clock));
         // Yahoo names a season by the year it starts, we by the year it ends
         if (league.season() != season - 1) {
             throw new IllegalArgumentException(("Yahoo league %d is from the %d-%d season, not %d-%d; a league id "

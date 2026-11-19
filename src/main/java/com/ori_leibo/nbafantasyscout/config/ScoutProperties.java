@@ -25,8 +25,7 @@ public record ScoutProperties(Espn espn, Sleeper sleeper, Yahoo yahoo, Http http
     public record Http(int maxAttempts, Duration initialBackoff) {
     }
 
-    /** {@code season} is the year the season ends (2026 = 2025-26). */
-    public record Sync(int season, int threads, int maxConsecutiveFailures) {
+    public record Sync(int threads, int maxConsecutiveFailures) {
     }
 
     public record Matcher(double minConfidence) {

@@ -17,7 +17,10 @@ import com.ori_leibo.nbafantasyscout.domain.GameLog;
 import com.ori_leibo.nbafantasyscout.domain.Player;
 import com.ori_leibo.nbafantasyscout.persistence.GameLogRepository;
 import com.ori_leibo.nbafantasyscout.persistence.GameLogUpsert;
+import java.time.Clock;
+import java.time.Instant;
 import java.time.LocalDate;
+import java.time.ZoneOffset;
 import java.util.List;
 import java.util.Set;
 import org.junit.jupiter.api.BeforeEach;
@@ -48,7 +51,9 @@ class GameLogSyncTest {
     @BeforeEach
     void setUp() {
         // Runnable::run: tasks run on the calling thread, so the order of calls is predictable
-        sync = new GameLogSync(nba, gameLogUpsert, gameLogs, Runnable::run, SEASON, 2);
+        // a day in the 2025-26 season
+        Clock clock = Clock.fixed(Instant.parse("2026-01-15T12:00:00Z"), ZoneOffset.UTC);
+        sync = new GameLogSync(nba, gameLogUpsert, gameLogs, Runnable::run, clock, 2);
         // by default every player already has last season stored; the backfill test overrides this
         lenient().when(gameLogs.findPlayerIdsWithGamesBetween(GameLog.seasonStart(SEASON - 1), GameLog.seasonEnd(SEASON - 1)))
                 .thenReturn(Set.of(LUKA.id(), JOKIC.id(), SGA.id()));

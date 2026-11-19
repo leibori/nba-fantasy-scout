@@ -5,6 +5,8 @@ import com.ori_leibo.nbafantasyscout.domain.GameLog;
 import com.ori_leibo.nbafantasyscout.domain.Player;
 import com.ori_leibo.nbafantasyscout.persistence.GameLogRepository;
 import com.ori_leibo.nbafantasyscout.persistence.GameLogUpsert;
+import java.time.Clock;
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
@@ -27,16 +29,16 @@ public class GameLogSync {
     private final GameLogUpsert gameLogUpsert;
     private final GameLogRepository gameLogs;
     private final Executor executor;
-    private final int season;
+    private final Clock clock;
     private final int maxConsecutiveFailures;
 
     public GameLogSync(NbaDataClient nba, GameLogUpsert gameLogUpsert, GameLogRepository gameLogs, Executor executor,
-                       int season, int maxConsecutiveFailures) {
+                       Clock clock, int maxConsecutiveFailures) {
         this.nba = nba;
         this.gameLogUpsert = gameLogUpsert;
         this.gameLogs = gameLogs;
         this.executor = executor;
-        this.season = season;
+        this.clock = clock;
         this.maxConsecutiveFailures = maxConsecutiveFailures;
     }
 
@@ -50,6 +52,8 @@ public class GameLogSync {
 
     /** Throws when ESPN fails call after call: it looks down, so going on would only skip every player. */
     public Result sync(List<Player> roster) {
+        // read per sync, not at startup: a server running past August 1 moves on to the new season by itself
+        int season = GameLog.seasonOf(LocalDate.now(clock));
         log.info("Syncing game logs of {} players for season {}", roster.size(), season);
         int lastSeason = season - 1;
         // TODO: veterans with no games last season (a lost season) are asked again every sync; only a handful,
@@ -63,7 +67,7 @@ public class GameLogSync {
         // submit every player first, then wait; one stream would wait for each task before submitting the next
         List<CompletableFuture<PlayerSync>> tasks = roster.stream()
                 .map(player -> CompletableFuture.supplyAsync(
-                        () -> syncPlayer(player, haveLastSeason, consecutiveFailures, abortCause), executor))
+                        () -> syncPlayer(player, season, haveLastSeason, consecutiveFailures, abortCause), executor))
                 .toList();
         List<PlayerSync> synced = tasks.stream().map(CompletableFuture::join).toList();
         if (abortCause.get() != null) {
@@ -78,7 +82,7 @@ public class GameLogSync {
     }
 
     // runs on a pool thread
-    private PlayerSync syncPlayer(Player player, Set<Long> haveLastSeason, AtomicInteger consecutiveFailures,
+    private PlayerSync syncPlayer(Player player, int season, Set<Long> haveLastSeason, AtomicInteger consecutiveFailures,
                                   AtomicReference<RuntimeException> abortCause) {
         if (abortCause.get() != null) {
             return PlayerSync.SKIPPED;

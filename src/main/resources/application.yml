@@ -35,7 +35,6 @@ scout:
     max-attempts: 3            # first call + 2 retries, on network errors, 429 and 5xx
     initial-backoff: 500ms     # then 1s
   sync:
-    season: 2027               # year the season ends (2027 = 2026-27)
     threads: 8                 # parallel game log fetches; stays under Hikari's default pool of 10 connections
     max-consecutive-failures: 10
   matcher:

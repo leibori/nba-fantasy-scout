@@ -1,7 +1,6 @@
 package com.ori_leibo.nbafantasyscout.demo;
 
 import com.ori_leibo.nbafantasyscout.client.NbaDataClient;
-import com.ori_leibo.nbafantasyscout.config.ScoutProperties;
 import com.ori_leibo.nbafantasyscout.domain.GameLog;
 import com.ori_leibo.nbafantasyscout.domain.LeagueScoring;
 import com.ori_leibo.nbafantasyscout.domain.Player;
@@ -18,6 +17,8 @@ import com.ori_leibo.nbafantasyscout.trend.FormClassifier;
 import com.ori_leibo.nbafantasyscout.trend.HotStreakScoring;
 import com.ori_leibo.nbafantasyscout.trend.Trend;
 import com.ori_leibo.nbafantasyscout.trend.TrendCalculator;
+import java.time.Clock;
+import java.time.LocalDate;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
@@ -56,7 +57,7 @@ class DemoRunner implements CommandLineRunner {
     DemoRunner(SyncService sync, NbaDataClient espn, PlayerRepository players, GameLogRepository gameLogs,
                GameLogUpsert upsert, TrendingSnapshotRepository snapshots, TrendCalculator trendCalculator,
                HotStreakScoring hotStreakScoring, TrendService trendService, RecommendationService recommendations,
-               ScoutProperties properties) {
+               Clock clock) {
         this.sync = sync;
         this.espn = espn;
         this.players = players;
@@ -67,7 +68,7 @@ class DemoRunner implements CommandLineRunner {
         this.hotStreakScoring = hotStreakScoring;
         this.trendService = trendService;
         this.recommendations = recommendations;
-        this.season = properties.sync().season();
+        this.season = GameLog.seasonOf(LocalDate.now(clock));
     }
 
     @Override

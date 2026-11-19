@@ -14,6 +14,8 @@ import com.ori_leibo.nbafantasyscout.trend.FormClassifier;
 import com.ori_leibo.nbafantasyscout.trend.ScoringStrategy;
 import com.ori_leibo.nbafantasyscout.trend.Trend;
 import com.ori_leibo.nbafantasyscout.trend.TrendCalculator;
+import java.time.Clock;
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -37,17 +39,17 @@ public class SeasonData {
     private final TrendingSnapshotRepository snapshots;
     private final TrendCalculator calculator;
     private final ScoringStrategy hotScoring;
-    private final int season;
+    private final Clock clock;
     private final double leagueMinMinutes;
 
     public SeasonData(PlayerRepository players, GameLogRepository gameLogs, TrendingSnapshotRepository snapshots,
-                      TrendCalculator calculator, ScoringStrategy hotScoring, int season, double leagueMinMinutes) {
+                      TrendCalculator calculator, ScoringStrategy hotScoring, Clock clock, double leagueMinMinutes) {
         this.players = players;
         this.gameLogs = gameLogs;
         this.snapshots = snapshots;
         this.calculator = calculator;
         this.hotScoring = hotScoring;
-        this.season = season;
+        this.clock = clock;
         this.leagueMinMinutes = leagueMinMinutes;
     }
 
@@ -75,6 +77,7 @@ public class SeasonData {
     @Cacheable(cacheNames = CACHE, sync = true)
     public Snapshot load() {
         long start = System.nanoTime();
+        int season = GameLog.seasonOf(LocalDate.now(clock));
         List<Player> roster = players.findAll().stream()
                 .map(PlayerEntity::toPlayer)
                 .filter(player -> player.team() != null)
