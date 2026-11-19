@@ -21,6 +21,7 @@ import com.ori_leibo.nbafantasyscout.recommend.TrendService;
 import com.ori_leibo.nbafantasyscout.roster.PlayerMatcher;
 import com.ori_leibo.nbafantasyscout.roster.RosterRules;
 import com.ori_leibo.nbafantasyscout.roster.RosterService;
+import com.ori_leibo.nbafantasyscout.roster.YahooLeagueService;
 import com.ori_leibo.nbafantasyscout.sync.GameLogSync;
 import com.ori_leibo.nbafantasyscout.sync.SyncService;
 import com.ori_leibo.nbafantasyscout.sync.TrendingSync;
@@ -187,5 +188,10 @@ public class ScoutConfig {
         ScoutProperties.Scoring.PerFormat dropGap = properties.scoring().dropGap();
         return new RosterService(trendService, playerMatcher, new RosterRules(RosterRules.DEFAULT_ORDER),
                 dropGap.categories(), dropGap.points(), properties.roster().pickUpNow());
+    }
+
+    @Bean
+    YahooLeagueService yahooLeagueService(YahooClient yahooClient, ScoutProperties properties) {
+        return new YahooLeagueService(yahooClient, properties.sync().season());
     }
 }

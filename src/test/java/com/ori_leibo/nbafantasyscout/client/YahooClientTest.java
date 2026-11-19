@@ -1,17 +1,19 @@
 package com.ori_leibo.nbafantasyscout.client;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import java.net.URI;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-// the client's own logic is paging: which pages it asks for and when it stops
+// the client's own logic: which pages it asks for and when it stops, and which HTTP errors are the user's
 @ExtendWith(MockitoExtension.class)
 class YahooClientTest {
 
@@ -40,5 +42,17 @@ class YahooClientTest {
         assertEquals(25, new YahooClient(http, BASE, 150, new YahooMapper()).freeAgents(246889).size());
 
         verify(http, times(2)).get(anyString());
+    }
+
+    @Test
+    void aRefusedLeagueIsTheUsersMistakeButAServerErrorIsNot() {
+        YahooClient client = new YahooClient(http, BASE, 150, new YahooMapper());
+        when(http.get(anyString()))
+                .thenThrow(new HttpFetcher.HttpStatusException("Yahoo", 401, URI.create(BASE)))
+                .thenThrow(new HttpFetcher.HttpStatusException("Yahoo", 503, URI.create(BASE)));
+
+        // unknown or private: a 400 for the user with a hint; Yahoo being down stays a server error
+        assertThrows(IllegalArgumentException.class, () -> client.league(1));
+        assertThrows(HttpFetcher.HttpStatusException.class, () -> client.league(1));
     }
 }

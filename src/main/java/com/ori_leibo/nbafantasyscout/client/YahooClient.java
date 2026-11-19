@@ -27,8 +27,19 @@ public class YahooClient {
         this.mapper = mapper;
     }
 
+    /** Throws {@link IllegalArgumentException} when Yahoo refuses the league: unknown, or private (needs a login). */
     public YahooMapper.League league(long leagueId) {
-        return mapper.league(http.get("%s/league/nba.l.%d/settings?format=json".formatted(baseUrl, leagueId)));
+        String json;
+        try {
+            json = http.get("%s/league/nba.l.%d/settings?format=json".formatted(baseUrl, leagueId));
+        } catch (HttpFetcher.HttpStatusException e) {
+            if (e.status() >= 400 && e.status() < 500 && e.status() != 429) {
+                throw new IllegalArgumentException(
+                        "Yahoo league %d was not found or is not public; use typed names".formatted(leagueId), e);
+            }
+            throw e;
+        }
+        return mapper.league(json);
     }
 
     public List<YahooMapper.Team> teams(long leagueId) {
