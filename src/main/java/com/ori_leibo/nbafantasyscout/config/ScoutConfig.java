@@ -7,6 +7,8 @@ import com.ori_leibo.nbafantasyscout.client.HttpFetcher;
 import com.ori_leibo.nbafantasyscout.client.NbaDataClient;
 import com.ori_leibo.nbafantasyscout.client.SleeperClient;
 import com.ori_leibo.nbafantasyscout.client.SleeperMapper;
+import com.ori_leibo.nbafantasyscout.client.YahooClient;
+import com.ori_leibo.nbafantasyscout.client.YahooMapper;
 import com.ori_leibo.nbafantasyscout.domain.LeagueScoring;
 import com.ori_leibo.nbafantasyscout.persistence.GameLogRepository;
 import com.ori_leibo.nbafantasyscout.persistence.GameLogUpsert;
@@ -90,6 +92,13 @@ public class ScoutConfig {
     }
 
     // each source gets its own retry and rate limiter, so Sleeper calls never use up ESPN's permits
+    @Bean
+    YahooClient yahooClient(HttpClient httpClient, ScoutProperties properties) {
+        ScoutProperties.Yahoo yahoo = properties.yahoo();
+        HttpFetcher http = httpFetcher(httpClient, "Yahoo", yahoo.timeout(), yahoo.maxCallsPerSecond(), properties.http());
+        return new YahooClient(http, yahoo.baseUrl(), yahoo.maxFreeAgents(), new YahooMapper());
+    }
+
     private static HttpFetcher httpFetcher(HttpClient httpClient, String source, Duration timeout, int maxCallsPerSecond,
                                            ScoutProperties.Http http) {
         Retry retry = Retry.of(source, RetryConfig.custom()

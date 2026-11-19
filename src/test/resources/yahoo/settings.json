@@ -1,0 +1,337 @@
+{
+ "fantasy_content": {
+  "xml:lang": "en-US",
+  "yahoo:uri": "/fantasy/v2/league/nba.l.246889/settings",
+  "league": [
+   {
+    "league_key": "478.l.246889",
+    "league_id": "246889",
+    "name": "Yahoo H2H-Pts 246889",
+    "url": "https://basketball.fantasysports.yahoo.com/nba/246889",
+    "recordbook_url": "https://basketball.fantasysports.yahoo.com/nba/246889/recordbook?layout=webview&device=smartphone",
+    "logo_url": "https://s.yimg.com/cv/api/default/20180206/default-league-logo@2x.png",
+    "draft_status": "postdraft",
+    "num_teams": 10,
+    "max_teams": "10",
+    "edit_key": "2026-11-18",
+    "weekly_deadline": "intraday",
+    "roster_type": "date",
+    "league_update_timestamp": "1794992747",
+    "scoring_type": "headpoint",
+    "scoring_label": "H2H Points",
+    "league_type": "public",
+    "renew": "",
+    "renewed": "",
+    "felo_tier": "silver",
+    "is_highscore": false,
+    "is_guillotine": "0",
+    "matchup_week": 5,
+    "iris_group_chat_id": "",
+    "short_invitation_url": "https://basketball.fantasysports.yahoo.com/nba/246889/invitation",
+    "allow_add_to_dl_extra_pos": 0,
+    "is_pro_league": "0",
+    "is_cash_league": "0",
+    "current_week": 5,
+    "start_week": "1",
+    "start_date": "2026-10-20",
+    "end_week": "22",
+    "end_date": "2027-04-04",
+    "current_date": "2026-11-18",
+    "is_plus_league": "0",
+    "game_code": "nba",
+    "season": "2026",
+    "is_playoff_game": "0"
+   },
+   {
+    "settings": [
+     {
+      "draft_type": "live",
+      "is_auction_draft": "0",
+      "scoring_type": "headpoint",
+      "scoring_label": "H2H Points",
+      "custom_scoring_preset_name": "",
+      "custom_scoring_preset_logo": "",
+      "is_highscore": false,
+      "invite_permission": "all",
+      "uses_playoff": "1",
+      "has_playoff_consolation_games": true,
+      "playoff_start_week": "20",
+      "uses_playoff_reseeding": 1,
+      "uses_lock_eliminated_teams": 1,
+      "num_playoff_teams": "6",
+      "num_playoff_consolation_teams": 6,
+      "has_multiweek_championship": 0,
+      "waiver_type": "R",
+      "waiver_rule": "all",
+      "uses_faab": "0",
+      "draft_time": "1792088458",
+      "draft_pick_time": "60",
+      "post_draft_players": "W",
+      "max_teams": "10",
+      "waiver_time": "1",
+      "trade_end_date": "2027-03-04",
+      "trade_ratify_type": "vote",
+      "trade_reject_time": "2",
+      "player_pool": "ALL",
+      "cant_cut_list": "yahoo",
+      "draft_together": 0,
+      "sendbird_channel_url": "",
+      "roster_positions": [
+       {
+        "roster_position": {
+         "position": "PG",
+         "position_type": "P",
+         "count": 1,
+         "is_starting_position": 1
+        }
+       },
+       {
+        "roster_position": {
+         "position": "SG",
+         "position_type": "P",
+         "count": 1,
+         "is_starting_position": 1
+        }
+       },
+       {
+        "roster_position": {
+         "position": "G",
+         "position_type": "P",
+         "count": 1,
+         "is_starting_position": 1
+        }
+       },
+       {
+        "roster_position": {
+         "position": "SF",
+         "position_type": "P",
+         "count": 1,
+         "is_starting_position": 1
+        }
+       },
+       {
+        "roster_position": {
+         "position": "PF",
+         "position_type": "P",
+         "count": 1,
+         "is_starting_position": 1
+        }
+       },
+       {
+        "roster_position": {
+         "position": "F",
+         "position_type": "P",
+         "count": 1,
+         "is_starting_position": 1
+        }
+       },
+       {
+        "roster_position": {
+         "position": "C",
+         "position_type": "P",
+         "count": 2,
+         "is_starting_position": 1
+        }
+       },
+       {
+        "roster_position": {
+         "position": "Util",
+         "position_type": "P",
+         "count": 2,
+         "is_starting_position": 1
+        }
+       },
+       {
+        "roster_position": {
+         "position": "BN",
+         "count": 3,
+         "is_starting_position": 0
+        }
+       },
+       {
+        "roster_position": {
+         "position": "IL",
+         "count": 3,
+         "is_starting_position": 0
+        }
+       }
+      ],
+      "stat_categories": {
+       "stats": [
+        {
+         "stat": {
+          "stat_id": 12,
+          "enabled": "1",
+          "name": "Points Scored",
+          "display_name": "PTS",
+          "group": "misc",
+          "abbr": "PTS",
+          "sort_order": "1",
+          "position_type": "P",
+          "stat_position_types": [
+           {
+            "stat_position_type": {
+             "position_type": "P"
+            }
+           }
+          ]
+         }
+        },
+        {
+         "stat": {
+          "stat_id": 15,
+          "enabled": "1",
+          "name": "Total Rebounds",
+          "display_name": "REB",
+          "group": "misc",
+          "abbr": "REB",
+          "sort_order": "1",
+          "position_type": "P",
+          "stat_position_types": [
+           {
+            "stat_position_type": {
+             "position_type": "P"
+            }
+           }
+          ]
+         }
+        },
+        {
+         "stat": {
+          "stat_id": 16,
+          "enabled": "1",
+          "name": "Assists",
+          "display_name": "AST",
+          "group": "misc",
+          "abbr": "AST",
+          "sort_order": "1",
+          "position_type": "P",
+          "stat_position_types": [
+           {
+            "stat_position_type": {
+             "position_type": "P"
+            }
+           }
+          ]
+         }
+        },
+        {
+         "stat": {
+          "stat_id": 17,
+          "enabled": "1",
+          "name": "Steals",
+          "display_name": "ST",
+          "group": "misc",
+          "abbr": "ST",
+          "sort_order": "1",
+          "position_type": "P",
+          "stat_position_types": [
+           {
+            "stat_position_type": {
+             "position_type": "P"
+            }
+           }
+          ]
+         }
+        },
+        {
+         "stat": {
+          "stat_id": 18,
+          "enabled": "1",
+          "name": "Blocked Shots",
+          "display_name": "BLK",
+          "group": "misc",
+          "abbr": "BLK",
+          "sort_order": "1",
+          "position_type": "P",
+          "stat_position_types": [
+           {
+            "stat_position_type": {
+             "position_type": "P"
+            }
+           }
+          ]
+         }
+        },
+        {
+         "stat": {
+          "stat_id": 19,
+          "enabled": "1",
+          "name": "Turnovers",
+          "display_name": "TO",
+          "group": "misc",
+          "abbr": "TO",
+          "sort_order": "0",
+          "position_type": "P",
+          "stat_position_types": [
+           {
+            "stat_position_type": {
+             "position_type": "P"
+            }
+           }
+          ]
+         }
+        }
+       ],
+       "groups": [
+        {
+         "group": {
+          "group_name": "misc",
+          "group_display_name": "Misc",
+          "group_abbr": "Misc"
+         }
+        }
+       ]
+      },
+      "stat_modifiers": {
+       "stats": [
+        {
+         "stat": {
+          "stat_id": 12,
+          "value": "1"
+         }
+        },
+        {
+         "stat": {
+          "stat_id": 15,
+          "value": "1.2"
+         }
+        },
+        {
+         "stat": {
+          "stat_id": 16,
+          "value": "1.5"
+         }
+        },
+        {
+         "stat": {
+          "stat_id": 18,
+          "value": "3"
+         }
+        },
+        {
+         "stat": {
+          "stat_id": 17,
+          "value": "3"
+         }
+        },
+        {
+         "stat": {
+          "stat_id": 19,
+          "value": "-1"
+         }
+        }
+       ]
+      },
+      "max_weekly_adds": "4",
+      "uses_median_score": false,
+      "league_premium_features": []
+     }
+    ]
+   }
+  ],
+  "time": "22.28307723999ms",
+  "copyright": "Certain Data by Sportradar, Stats Perform and Rotowire",
+  "refresh_rate": "30"
+ }
+}

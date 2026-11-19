@@ -8,7 +8,7 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 
 /** Everything under {@code scout:} in application.yml, bound once at startup. */
 @ConfigurationProperties("scout")
-public record ScoutProperties(Espn espn, Sleeper sleeper, Http http, Sync sync, Matcher matcher, Trend trend, HotStreak hotStreak,
+public record ScoutProperties(Espn espn, Sleeper sleeper, Yahoo yahoo, Http http, Sync sync, Matcher matcher, Trend trend, HotStreak hotStreak,
                              Scoring scoring, Roster roster) {
 
     public record Espn(String teamsBaseUrl, String gameLogBaseUrl, Duration timeout, int maxCallsPerSecond) {
@@ -17,7 +17,11 @@ public record ScoutProperties(Espn espn, Sleeper sleeper, Http http, Sync sync, 
     public record Sleeper(String baseUrl, Duration timeout, int maxCallsPerSecond, int lookbackHours, int limit) {
     }
 
-    /** Retries for both sources: {@code maxAttempts} includes the first call; the wait doubles after each one. */
+    /** {@code maxFreeAgents}: how many of a league's best free agents to read (25 per request). */
+    public record Yahoo(String baseUrl, Duration timeout, int maxCallsPerSecond, int maxFreeAgents) {
+    }
+
+    /** Retries for every source: {@code maxAttempts} includes the first call; the wait doubles after each one. */
     public record Http(int maxAttempts, Duration initialBackoff) {
     }
 

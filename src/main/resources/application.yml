@@ -26,6 +26,11 @@ scout:
     max-calls-per-second: 5
     lookback-hours: 24
     limit: 25
+  yahoo:
+    base-url: https://pub-api-ro.fantasysports.yahoo.com/fantasy/v2  # read-only, public leagues, no login
+    timeout: 10s
+    max-calls-per-second: 2    # an undocumented host: stay gentle
+    max-free-agents: 150       # 6 requests; weaker free agents are never suggested anyway
   http:
     max-attempts: 3            # first call + 2 retries, on network errors, 429 and 5xx
     initial-backoff: 500ms     # then 1s
