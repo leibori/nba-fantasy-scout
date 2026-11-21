@@ -23,6 +23,7 @@ import com.ori_leibo.nbafantasyscout.roster.RosterRules;
 import com.ori_leibo.nbafantasyscout.roster.RosterService;
 import com.ori_leibo.nbafantasyscout.roster.YahooLeagueService;
 import com.ori_leibo.nbafantasyscout.sync.GameLogSync;
+import com.ori_leibo.nbafantasyscout.sync.SyncJobs;
 import com.ori_leibo.nbafantasyscout.sync.SyncService;
 import com.ori_leibo.nbafantasyscout.sync.TrendingSync;
 import com.ori_leibo.nbafantasyscout.trend.FormClassifier;
@@ -136,6 +137,22 @@ public class ScoutConfig {
     SyncService syncService(NbaDataClient nbaDataClient, PlayerRepository players, GameLogSync gameLogSync,
                             TrendingSync trendingSync, Clock clock, ApplicationEventPublisher events) {
         return new SyncService(nbaDataClient, players, gameLogSync, trendingSync, clock, events);
+    }
+
+    // one thread: one sync at a time, and not a fetch thread, which the sync itself waits on
+    @Bean
+    ThreadPoolTaskExecutor syncJobExecutor() {
+        ThreadPoolTaskExecutor executor = new ThreadPoolTaskExecutor();
+        executor.setCorePoolSize(1);
+        executor.setMaxPoolSize(1);
+        executor.setThreadNamePrefix("sync-job-");
+        executor.setDaemon(true);
+        return executor;
+    }
+
+    @Bean
+    SyncJobs syncJobs(SyncService syncService, Executor syncJobExecutor, Clock clock) {
+        return new SyncJobs(syncService::syncDaily, syncJobExecutor, clock);
     }
 
     @Bean
