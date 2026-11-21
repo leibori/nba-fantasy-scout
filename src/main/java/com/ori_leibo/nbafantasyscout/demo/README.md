@@ -35,7 +35,10 @@ On an empty database the first run also pulls last season for everyone, so it ta
    them. Early in a season the baseline is last season, printed as `LAST_SEASON, provisional`.
 4. **Everyone.** Runs `TrendService` for all rostered players and prints the count per form, the top 10 by value,
    all `EARLY_HOT` / `RETURNING` / `EARLY_COLD` players, the crowd signal for everyone in the latest Sleeper snapshot,
-   and the value of the 50th, 100th and 150th player. I used those last numbers to pick `scout.trend.high-value`.
+   and the value of the 50th, 100th and 150th player. I used those last numbers to pick `scout.scoring.high-value`.
+5. **Yahoo league.** Reads my public Yahoo league (format, my roster, the best free agents) and runs the roster advice
+   on it: keep / watch / drop per player and who to pick up now. Checks that every name matched an ESPN player and
+   that a wrong team name is refused. Needs this season's league id; a league id belongs to one season.
 
 On a database that's already filled, "game logs new or changed" should be 0 unless ESPN posted new games or stat
 corrections. Sleeper names without a confident ESPN match (usually free agents) are logged as WARN and skipped.

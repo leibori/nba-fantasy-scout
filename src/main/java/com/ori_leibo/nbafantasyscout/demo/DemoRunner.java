@@ -12,6 +12,9 @@ import com.ori_leibo.nbafantasyscout.persistence.PlayerRepository;
 import com.ori_leibo.nbafantasyscout.persistence.TrendingSnapshotRepository;
 import com.ori_leibo.nbafantasyscout.recommend.RecommendationService;
 import com.ori_leibo.nbafantasyscout.recommend.TrendService;
+import com.ori_leibo.nbafantasyscout.roster.Recommendation;
+import com.ori_leibo.nbafantasyscout.roster.RosterService;
+import com.ori_leibo.nbafantasyscout.roster.YahooLeagueService;
 import com.ori_leibo.nbafantasyscout.sync.SyncService;
 import com.ori_leibo.nbafantasyscout.trend.FormClassifier;
 import com.ori_leibo.nbafantasyscout.trend.HotStreakScoring;
@@ -30,8 +33,8 @@ import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Component;
 
 /**
- * Manual end-to-end check against the real ESPN and Sleeper APIs and the dev Postgres:
- * the wired SyncService fills the DB, then the data flows into TrendCalculator.
+ * Manual end-to-end check against the real ESPN, Sleeper and Yahoo APIs and the dev Postgres:
+ * the wired SyncService fills the DB, then the data flows into TrendCalculator and the roster advice.
  * Runs only with the "demo" profile; see README.md in this package for the command.
  * Prints to the console on purpose: it is a report for a human, not application logging.
  */
@@ -40,6 +43,9 @@ import org.springframework.stereotype.Component;
 class DemoRunner implements CommandLineRunner {
 
     private static final String SAMPLE_PLAYER = "Luka Doncic";
+    // my own public league; it has to be this season's league id
+    private static final long YAHOO_LEAGUE = 246889;
+    private static final String YAHOO_TEAM = "Givaat Shmuel Rabbis";
 
     private final SyncService sync;
     private final NbaDataClient espn;
@@ -51,13 +57,15 @@ class DemoRunner implements CommandLineRunner {
     private final HotStreakScoring hotStreakScoring;
     private final TrendService trendService;
     private final RecommendationService recommendations;
+    private final YahooLeagueService yahoo;
+    private final RosterService rosterService;
     private final int season;
     private int failures;
 
     DemoRunner(SyncService sync, NbaDataClient espn, PlayerRepository players, GameLogRepository gameLogs,
                GameLogUpsert upsert, TrendingSnapshotRepository snapshots, TrendCalculator trendCalculator,
                HotStreakScoring hotStreakScoring, TrendService trendService, RecommendationService recommendations,
-               Clock clock) {
+               YahooLeagueService yahoo, RosterService rosterService, Clock clock) {
         this.sync = sync;
         this.espn = espn;
         this.players = players;
@@ -68,6 +76,8 @@ class DemoRunner implements CommandLineRunner {
         this.hotStreakScoring = hotStreakScoring;
         this.trendService = trendService;
         this.recommendations = recommendations;
+        this.yahoo = yahoo;
+        this.rosterService = rosterService;
         this.season = GameLog.seasonOf(LocalDate.now(clock));
     }
 
@@ -152,7 +162,49 @@ class DemoRunner implements CommandLineRunner {
                 forms.size() == stored.stream().filter(p -> p.team() != null).count());
         check("players with games this season have a value (" + byValue.size() + ")", byValue.size() > 300);
 
+        yahooRoster();
+
         System.out.println(failures == 0 ? "\nDEMO PASSED\n" : "\nDEMO FAILED: " + failures + " check(s)\n");
+    }
+
+    private void yahooRoster() {
+        System.out.println("\n=== 5. Yahoo league " + YAHOO_LEAGUE + " -> roster advice for " + YAHOO_TEAM);
+        YahooLeagueService.LeagueTeam team;
+        try {
+            team = yahoo.read(YAHOO_LEAGUE, YAHOO_TEAM);
+        } catch (RuntimeException e) {
+            check("Yahoo league read (" + e.getMessage() + ")", false);
+            return;
+        }
+        System.out.println("  " + team.scoring() + ", warnings " + team.warnings());
+        check("roster read from Yahoo (" + team.roster().size() + " players)", !team.roster().isEmpty());
+        check("free agents read from Yahoo (" + team.freeAgents().size() + ")", !team.freeAgents().isEmpty());
+
+        RosterService.RosterAdvice advice = rosterService.advise(team.roster(), team.freeAgents(), team.scoring());
+        advice.roster().forEach(a -> System.out.printf("    %-5s %-26s value %6s  %-10s %s%s%n",
+                switch (a.recommendation()) {
+                    case Recommendation.Keep k -> "KEEP";
+                    case Recommendation.Watch w -> "WATCH";
+                    case Recommendation.Drop d -> "DROP";
+                },
+                a.name(), a.form().value() == null ? "-" : "%.2f".formatted(a.form().value()),
+                a.form().form(), a.recommendation().reason(), a.unsure() ? "  (unsure match)" : ""));
+        System.out.println("  pick up now: " + advice.pickUpNow().stream()
+                .map(f -> "%s (%s, %.2f)".formatted(f.player().name(), f.form(), f.value())).toList());
+        // a roster name that matched nobody gets no advice; a weak match gets advice flagged unsure
+        check("every roster player got advice", advice.roster().size() == team.roster().size());
+        check("every roster name matched with confidence " + advice.roster().stream()
+                        .filter(RosterService.PlayerAdvice::unsure).map(RosterService.PlayerAdvice::name).toList(),
+                advice.roster().stream().noneMatch(RosterService.PlayerAdvice::unsure));
+        check("free agent names matched (" + advice.unmatched().size() + " not: " + advice.unmatched() + ")",
+                advice.unmatched().size() <= team.freeAgents().size() / 10);
+
+        try {
+            yahoo.read(YAHOO_LEAGUE, "No Such Team");
+            check("an unknown team name is refused", false);
+        } catch (IllegalArgumentException e) {
+            check("an unknown team name is refused with the league's teams listed", e.getMessage().contains(YAHOO_TEAM));
+        }
     }
 
     private static void printForm(TrendService.PlayerForm form) {
