@@ -1,3 +1,6 @@
+server:
+  port: ${PORT:8080}           # hosting platforms pass the port in PORT
+
 spring:
   application:
     name: nba-fantasy-scout
@@ -39,6 +42,7 @@ scout:
     max-consecutive-failures: 10
     cron: "0 0 10 * * *"       # every day at 10:00: the last US games end about 08:00 Israel time
     zone: Asia/Jerusalem
+    token: ""                  # from SCOUT_SYNC_TOKEN; POST /sync/daily needs it in X-Sync-Token, empty = refused
   matcher:
     min-confidence: 0.85       # below this a name match is "unsure"
   trend:
