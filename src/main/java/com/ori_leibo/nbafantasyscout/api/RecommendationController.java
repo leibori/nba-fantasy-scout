@@ -28,14 +28,18 @@ public class RecommendationController {
         this.recommendations = recommendations;
     }
 
+    // the positions ESPN gives; finer ones (PG, SF) come only with a Yahoo league
+    private enum Position { G, F, C }
+
     @Operation(summary = "Rising players (hot, early hot, returning), best value first; "
-            + "scoring = points or categories, the configured format when left out")
+            + "scoring = points or categories, the configured format when left out; position = G, F or C")
     @GetMapping("/hot")
     public List<PlayerFormResponse> hot(@RequestParam(defaultValue = "10") @Min(1) @Max(100) int limit,
-                                        @RequestParam(required = false) String scoring) {
-        List<PlayerForm> forms = scoring == null
-                ? recommendations.hot(limit)
-                : recommendations.hot(limit, parse(LeagueScoring.Format.class, scoring, "scoring"));
+                                        @RequestParam(required = false) String scoring,
+                                        @RequestParam(required = false) String position) {
+        List<PlayerForm> forms = recommendations.hot(limit,
+                scoring == null ? null : parse(LeagueScoring.Format.class, scoring, "scoring"),
+                position == null ? null : parse(Position.class, position, "position").name());
         return forms.stream().map(PlayerFormResponse::from).toList();
     }
 

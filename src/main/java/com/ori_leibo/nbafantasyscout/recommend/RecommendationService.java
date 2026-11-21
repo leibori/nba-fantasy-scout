@@ -39,14 +39,12 @@ public class RecommendationService {
     /**
      * Rising players (hot, early hot, returning), best value first. Ranked by value, not hot score:
      * a rookie has no baseline and so no hot score, but every rising player has a value.
+     * {@code format} null = the configured one; {@code position} (ESPN: G, F or C) null = every position.
      */
-    public List<PlayerForm> hot(int limit) {
-        return hot(limit, defaultFormat);
-    }
-
-    public List<PlayerForm> hot(int limit, LeagueScoring.Format format) {
-        return trends.formOfAllPlayers(scoring(format)).stream()
+    public List<PlayerForm> hot(int limit, LeagueScoring.Format format, String position) {
+        return trends.formOfAllPlayers(scoring(format == null ? defaultFormat : format)).stream()
                 .filter(form -> RISING.contains(form.form()))
+                .filter(form -> position == null || position.equals(form.player().position()))
                 .sorted(Comparator.comparing(PlayerForm::value, Comparator.nullsLast(Comparator.reverseOrder())))
                 .limit(limit)
                 .toList();

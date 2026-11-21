@@ -42,7 +42,7 @@ class RecommendationControllerTest {
 
     @Test
     void hotListReturnsFormDtos() throws Exception {
-        when(recommendations.hot(10)).thenReturn(List.of(WALTER));
+        when(recommendations.hot(10, null, null)).thenReturn(List.of(WALTER));
 
         mvc.perform(get("/api/v1/recommendations/hot"))
                 .andExpect(status().isOk())
@@ -57,10 +57,10 @@ class RecommendationControllerTest {
     }
 
     @Test
-    void scoringPicksTheFormatCaseInsensitively() throws Exception {
-        when(recommendations.hot(10, LeagueScoring.Format.POINTS)).thenReturn(List.of(WALTER));
+    void scoringAndPositionAreCaseInsensitive() throws Exception {
+        when(recommendations.hot(10, LeagueScoring.Format.POINTS, "G")).thenReturn(List.of(WALTER));
 
-        mvc.perform(get("/api/v1/recommendations/hot").param("scoring", "Points"))
+        mvc.perform(get("/api/v1/recommendations/hot").param("scoring", "Points").param("position", "g"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$[0].name").value("Ja'Kobe Walter"));
     }
@@ -88,5 +88,9 @@ class RecommendationControllerTest {
         mvc.perform(get("/api/v1/recommendations/hot").param("scoring", "roto"))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.detail").value(org.hamcrest.Matchers.startsWith("Unknown scoring \"roto\"")));
+
+        mvc.perform(get("/api/v1/recommendations/hot").param("position", "PG"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.detail").value("Unknown position \"PG\"; use one of [G, F, C]"));
     }
 }

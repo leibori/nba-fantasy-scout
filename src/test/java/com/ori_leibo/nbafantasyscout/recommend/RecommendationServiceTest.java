@@ -51,10 +51,14 @@ class RecommendationServiceTest {
                 form(2, Form.EARLY_HOT, 2.0, null),
                 form(3, Form.RETURNING, 5.0, null),
                 form(4, Form.HOT, 3.0, null),
-                form(5, Form.EARLY_COLD, 1.0, null)));
+                form(5, Form.EARLY_COLD, 1.0, null),
+                new PlayerForm(new Player(6, "Guard", "LAL", "G", null, 3), 4, null, null, 4.0, Form.HOT, null,
+                        CrowdSignal.NONE)));
 
-        assertEquals(List.of(3L, 4L, 2L), recommendations.hot(10).stream().map(f -> f.player().id()).toList());
-        assertEquals(List.of(3L), recommendations.hot(1).stream().map(f -> f.player().id()).toList());
+        assertEquals(List.of(3L, 6L, 4L, 2L), recommendations.hot(10, null, null).stream().map(f -> f.player().id()).toList());
+        assertEquals(List.of(3L), recommendations.hot(1, null, null).stream().map(f -> f.player().id()).toList());
+        // the position filter runs before the limit, so a limit still means that many guards
+        assertEquals(List.of(6L), recommendations.hot(1, null, "G").stream().map(f -> f.player().id()).toList());
     }
 
     @Test
@@ -80,8 +84,8 @@ class RecommendationServiceTest {
 
     @Test
     void hotUsesTheRequestedFormatAndOtherwiseTheDefault() {
-        recommendations.hot(10, LeagueScoring.Format.POINTS);
-        recommendations.hot(10);
+        recommendations.hot(10, LeagueScoring.Format.POINTS, null);
+        recommendations.hot(10, null, null);
 
         verify(trends).formOfAllPlayers(POINTS);
         verify(trends).formOfAllPlayers(new LeagueScoring.Categories());
