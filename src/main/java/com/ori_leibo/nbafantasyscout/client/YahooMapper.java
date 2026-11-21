@@ -7,14 +7,13 @@ import java.util.EnumMap;
 import java.util.HashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
-import java.util.Set;
 import java.util.Map;
 import java.util.Set;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.json.JsonMapper;
 
 /**
- * Turns Yahoo Fantasy JSON into what the roster advice needs: the league's scoring, its teams, and player names.
+ * Turns Yahoo Fantasy JSON into what the roster advice needs: the league's scoring, its teams, and players with their positions.
  * Yahoo's JSON is converted from XML: lists are objects keyed "0", "1", ... with a "count", and an entity is an
  * array of one-field objects ({"name": ...}, {"team_key": ...}).
  */
