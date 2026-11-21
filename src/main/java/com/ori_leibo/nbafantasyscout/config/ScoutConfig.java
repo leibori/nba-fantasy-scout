@@ -24,6 +24,7 @@ import com.ori_leibo.nbafantasyscout.roster.RosterService;
 import com.ori_leibo.nbafantasyscout.roster.YahooLeagueService;
 import com.ori_leibo.nbafantasyscout.sync.GameLogSync;
 import com.ori_leibo.nbafantasyscout.sync.SyncJobs;
+import com.ori_leibo.nbafantasyscout.sync.SyncScheduler;
 import com.ori_leibo.nbafantasyscout.sync.SyncService;
 import com.ori_leibo.nbafantasyscout.sync.TrendingSync;
 import com.ori_leibo.nbafantasyscout.trend.FormClassifier;
@@ -46,11 +47,13 @@ import org.springframework.cache.annotation.EnableCaching;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.scheduling.annotation.EnableScheduling;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 
 /** Builds the plain-Java clients and services from {@link ScoutProperties}; Spring only wires them. */
 @Configuration
 @EnableCaching
+@EnableScheduling
 @EnableConfigurationProperties(ScoutProperties.class)
 public class ScoutConfig {
 
@@ -153,6 +156,11 @@ public class ScoutConfig {
     @Bean
     SyncJobs syncJobs(SyncService syncService, Executor syncJobExecutor, Clock clock) {
         return new SyncJobs(syncService::syncDaily, syncJobExecutor, clock);
+    }
+
+    @Bean
+    SyncScheduler syncScheduler(SyncJobs syncJobs) {
+        return new SyncScheduler(syncJobs);
     }
 
     @Bean

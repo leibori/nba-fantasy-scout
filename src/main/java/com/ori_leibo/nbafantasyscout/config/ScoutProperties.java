@@ -25,7 +25,8 @@ public record ScoutProperties(Espn espn, Sleeper sleeper, Yahoo yahoo, Http http
     public record Http(int maxAttempts, Duration initialBackoff) {
     }
 
-    public record Sync(int threads, int maxConsecutiveFailures) {
+    /** {@code cron} and {@code zone}: when the daily sync starts by itself; cron "-" turns it off. */
+    public record Sync(int threads, int maxConsecutiveFailures, String cron, String zone) {
     }
 
     public record Matcher(double minConfidence) {

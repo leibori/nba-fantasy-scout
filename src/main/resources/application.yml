@@ -37,6 +37,8 @@ scout:
   sync:
     threads: 8                 # parallel game log fetches; stays under Hikari's default pool of 10 connections
     max-consecutive-failures: 10
+    cron: "0 0 10 * * *"       # every day at 10:00: the last US games end about 08:00 Israel time
+    zone: Asia/Jerusalem
   matcher:
     min-confidence: 0.85       # below this a name match is "unsure"
   trend:
@@ -79,3 +81,13 @@ logging:
     rollingpolicy:
       max-history: 2         # days of rotated files to keep
       total-size-cap: 50MB   # hard cap on the whole logs folder
+
+---
+# the demo runs its own sync; a scheduled one must not start next to it
+spring:
+  config:
+    activate:
+      on-profile: demo
+scout:
+  sync:
+    cron: "-"
