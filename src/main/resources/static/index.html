@@ -1,0 +1,255 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>NBA Fantasy Scout</title>
+<style>
+  :root { --bg: #f7f7f8; --card: #fff; --text: #1d1d1f; --muted: #6b6b70; --line: #e3e3e6; --accent: #1f5fbf;
+          --keep: #1e7d3a; --watch: #a86400; --drop: #b3261e; }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg: #131315; --card: #1c1c1f; --text: #ececee; --muted: #9a9aa0; --line: #2e2e33; --accent: #6ea2ff;
+            --keep: #5cc27a; --watch: #e0a546; --drop: #ff7b72; }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text); font: 15px/1.45 system-ui, -apple-system, "Segoe UI", sans-serif; }
+  main { max-width: 1100px; margin: 0 auto; padding: 24px 16px 48px; }
+  h1 { font-size: 22px; margin: 0 0 4px; }
+  .sub { color: var(--muted); margin: 0 0 20px; }
+  .sub a { color: var(--accent); }
+  nav { display: flex; gap: 4px; border-bottom: 1px solid var(--line); margin-bottom: 16px; flex-wrap: wrap; }
+  nav button { background: none; border: 0; border-bottom: 2px solid transparent; padding: 8px 12px; font: inherit;
+               color: var(--muted); cursor: pointer; }
+  nav button[aria-selected="true"] { color: var(--text); border-bottom-color: var(--accent); font-weight: 600; }
+  section { display: none; }
+  section.active { display: block; }
+  form { display: flex; flex-wrap: wrap; gap: 12px; align-items: flex-end; background: var(--card);
+         border: 1px solid var(--line); border-radius: 8px; padding: 14px; margin-bottom: 16px; }
+  label { display: flex; flex-direction: column; gap: 4px; font-size: 13px; color: var(--muted); }
+  label.inline { flex-direction: row; align-items: center; gap: 6px; color: var(--text); }
+  input, select, textarea { font: inherit; color: var(--text); background: var(--bg); border: 1px solid var(--line);
+                            border-radius: 6px; padding: 6px 8px; }
+  textarea { width: 260px; height: 150px; resize: vertical; }
+  button.go { font: inherit; background: var(--accent); color: #fff; border: 0; border-radius: 6px; padding: 7px 16px;
+              cursor: pointer; }
+  button.go:disabled { opacity: .6; cursor: wait; }
+  .wrap { overflow-x: auto; background: var(--card); border: 1px solid var(--line); border-radius: 8px; margin-bottom: 16px; }
+  table { border-collapse: collapse; width: 100%; font-size: 14px; }
+  th, td { text-align: left; padding: 7px 10px; border-bottom: 1px solid var(--line); white-space: nowrap; }
+  th { font-weight: 600; color: var(--muted); font-size: 12px; text-transform: uppercase; letter-spacing: .03em; }
+  td.num { text-align: right; font-variant-numeric: tabular-nums; }
+  td.reason { white-space: normal; min-width: 220px; }
+  tr:last-child td { border-bottom: 0; }
+  .KEEP { color: var(--keep); font-weight: 600; } .WATCH { color: var(--watch); font-weight: 600; }
+  .DROP { color: var(--drop); font-weight: 600; }
+  .muted { color: var(--muted); }
+  .msg { padding: 10px 12px; border-radius: 6px; margin-bottom: 12px; border: 1px solid var(--line); background: var(--card); }
+  .msg.error { border-color: var(--drop); color: var(--drop); }
+  h2 { font-size: 16px; margin: 20px 0 8px; }
+  .hidden { display: none !important; }
+</style>
+</head>
+<body>
+<main>
+  <h1>NBA Fantasy Scout</h1>
+  <p class="sub">Breakouts and declines from recent form, and keep / watch / drop for your roster.
+    API docs: <a href="/swagger-ui.html">Swagger UI</a></p>
+
+  <nav role="tablist">
+    <button role="tab" data-tab="hot" aria-selected="true">Hot players</button>
+    <button role="tab" data-tab="category" aria-selected="false">By category</button>
+    <button role="tab" data-tab="roster" aria-selected="false">My roster</button>
+  </nav>
+
+  <section id="hot" class="active">
+    <form id="hot-form">
+      <label>Players <input name="limit" type="number" min="1" max="100" value="20"></label>
+      <label>Scoring
+        <select name="scoring"><option value="">Default</option><option value="points">Points</option>
+          <option value="categories">9-cat</option></select></label>
+      <label>Position
+        <select name="position"><option value="">Any</option><option>G</option><option>F</option><option>C</option></select></label>
+      <button class="go">Show</button>
+    </form>
+    <div class="out"></div>
+  </section>
+
+  <section id="category">
+    <form id="category-form">
+      <label>Category
+        <select name="category">
+          <option value="PTS">Points</option><option value="REB">Rebounds</option><option value="AST">Assists</option>
+          <option value="STL">Steals</option><option value="BLK">Blocks</option><option value="THREES">3-pointers</option>
+          <option value="FG_PCT">FG%</option><option value="FT_PCT">FT%</option><option value="TO">Turnovers</option>
+        </select></label>
+      <label>Players <input name="limit" type="number" min="1" max="100" value="20"></label>
+      <button class="go">Show</button>
+    </form>
+    <div class="out"></div>
+  </section>
+
+  <section id="roster">
+    <form id="roster-form">
+      <label class="inline"><input type="radio" name="source" value="yahoo" checked> Yahoo league</label>
+      <label class="inline"><input type="radio" name="source" value="typed"> Type names</label>
+      <div class="yahoo" style="display:flex; gap:12px; flex-wrap:wrap; width:100%">
+        <label>League id <input name="leagueId" inputmode="numeric" placeholder="e.g. 246889"></label>
+        <label>Team name <input name="teamName" placeholder="as shown in Yahoo"></label>
+      </div>
+      <div class="typed hidden" style="display:flex; gap:12px; flex-wrap:wrap; width:100%">
+        <label>My roster, one per line <textarea name="myRoster"></textarea></label>
+        <label>Free agents, one per line (optional) <textarea name="freeAgents"></textarea></label>
+      </div>
+      <label class="inline"><input type="checkbox" name="samePosition"> Replace only with the same position</label>
+      <button class="go">Advise</button>
+    </form>
+    <div class="out"></div>
+  </section>
+</main>
+
+<script>
+  // every value from the API goes in through textContent, never innerHTML: names come from Yahoo
+  function el(tag, text, cls) {
+    const node = document.createElement(tag);
+    if (text !== undefined && text !== null) node.textContent = text;
+    if (cls) node.className = cls;
+    return node;
+  }
+  const num = (value, digits = 2) => value === null || value === undefined ? '' : value.toFixed(digits);
+
+  function table(columns, rows) {
+    const wrap = el('div', null, 'wrap');
+    const t = el('table');
+    const head = t.createTHead().insertRow();
+    columns.forEach(c => head.appendChild(el('th', c.title)));
+    const body = t.createTBody();
+    rows.forEach(row => {
+      const tr = body.insertRow();
+      columns.forEach(c => {
+        const td = el('td', c.value(row), c.cls ? (typeof c.cls === 'function' ? c.cls(row) : c.cls) : '');
+        tr.appendChild(td);
+      });
+    });
+    wrap.appendChild(t);
+    return wrap;
+  }
+
+  const crowd = p => p.crowd && p.crowd.move ? `${p.crowd.move} ${p.crowd.count} · ${p.crowd.signal}` : '';
+  const playerColumns = [
+    { title: 'Player', value: p => p.name },
+    { title: 'Team', value: p => p.team },
+    { title: 'Pos', value: p => p.position },
+    { title: 'Form', value: p => p.form + (p.provisional ? ' *' : '') },
+    { title: 'Value', value: p => num(p.value), cls: 'num' },
+    { title: 'Hot score', value: p => num(p.hotScore, 3), cls: 'num' },
+    { title: 'Games', value: p => p.gamesThisSeason, cls: 'num' },
+    { title: 'Crowd (Sleeper)', value: crowd },
+    { title: 'Injury', value: p => p.injuryStatus || '' },
+  ];
+
+  async function call(url, options) {
+    const response = await fetch(url, options);
+    const body = await response.json().catch(() => null);
+    if (!response.ok) {
+      throw new Error((body && (body.detail || body.error)) || `Request failed (${response.status})`);
+    }
+    return body;
+  }
+
+  // runs one request for a form: disables its button, clears and fills its output, shows errors
+  function bind(formId, run) {
+    const form = document.getElementById(formId);
+    const out = form.parentElement.querySelector('.out');
+    form.addEventListener('submit', async event => {
+      event.preventDefault();
+      const button = form.querySelector('button.go');
+      button.disabled = true;
+      out.replaceChildren(el('p', 'Loading...', 'muted'));
+      try {
+        out.replaceChildren(...await run(new FormData(form)));
+      } catch (e) {
+        out.replaceChildren(el('div', e.message, 'msg error'));
+      } finally {
+        button.disabled = false;
+      }
+    });
+  }
+
+  bind('hot-form', async data => {
+    const params = new URLSearchParams({ limit: data.get('limit') });
+    if (data.get('scoring')) params.set('scoring', data.get('scoring'));
+    if (data.get('position')) params.set('position', data.get('position'));
+    const players = await call('/api/v1/recommendations/hot?' + params);
+    if (!players.length) return [el('p', 'No rising players.', 'muted')];
+    const out = [table(playerColumns, players)];
+    if (players.some(p => p.provisional)) {
+      out.push(el('p', '* provisional: few games this season, compared with last season', 'muted'));
+    }
+    return out;
+  });
+
+  bind('category-form', async data => {
+    const changes = await call(`/api/v1/recommendations/${data.get('category')}?limit=${data.get('limit')}`);
+    const columns = [{ title: 'Change per game', value: c => num(c.change, 3), cls: 'num' },
+      ...playerColumns.slice(0, 5).map(col => ({ ...col, value: c => col.value(c.player) }))];
+    return [table(columns, changes)];
+  });
+
+  const lines = text => text.split('\n').map(s => s.trim()).filter(Boolean);
+  bind('roster-form', async data => {
+    const samePosition = data.get('samePosition') === 'on';
+    const yahoo = data.get('source') === 'yahoo';
+    remember(data);
+    const advice = yahoo
+      ? await call('/api/v1/roster/from-yahoo', post({ leagueId: Number(data.get('leagueId')),
+          teamName: data.get('teamName'), samePosition }))
+      : await call('/api/v1/roster', post({ myRoster: lines(data.get('myRoster')),
+          freeAgents: lines(data.get('freeAgents')), samePosition }));
+
+    const out = [];
+    advice.warnings.forEach(w => out.push(el('div', w, 'msg')));
+    if (advice.unmatched.length) out.push(el('div', 'Not matched: ' + advice.unmatched.join(', '), 'msg'));
+    out.push(el('h2', 'My roster'));
+    out.push(table([
+      { title: 'Advice', value: a => a.advice, cls: a => a.advice },
+      { title: 'Player', value: a => a.player.name + (a.unsure ? ` (typed "${a.name}", check)` : '') },
+      { title: 'Pos', value: a => a.player.position },
+      { title: 'Form', value: a => a.player.form },
+      { title: 'Value', value: a => num(a.player.value), cls: 'num' },
+      { title: 'Why', value: a => a.reason, cls: 'reason' },
+      { title: 'Pick up instead', value: a => a.replacement ? `${a.replacement.name} (${num(a.replacement.value)})` : '' },
+    ], advice.roster));
+    out.push(el('h2', 'Pick up now'));
+    out.push(advice.pickUpNow.length ? table(playerColumns, advice.pickUpNow) : el('p', 'Nobody stands out.', 'muted'));
+    return out;
+  });
+
+  const post = body => ({ method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+
+  // tabs
+  document.querySelectorAll('nav button').forEach(tab => tab.addEventListener('click', () => {
+    document.querySelectorAll('nav button').forEach(t => t.setAttribute('aria-selected', t === tab));
+    document.querySelectorAll('section').forEach(s => s.classList.toggle('active', s.id === tab.dataset.tab));
+  }));
+
+  // typed names or a Yahoo league
+  const rosterForm = document.getElementById('roster-form');
+  rosterForm.querySelectorAll('input[name="source"]').forEach(radio => radio.addEventListener('change', () => {
+    const yahoo = rosterForm.elements.source.value === 'yahoo';
+    rosterForm.querySelector('.yahoo').classList.toggle('hidden', !yahoo);
+    rosterForm.querySelector('.typed').classList.toggle('hidden', yahoo);
+  }));
+
+  // the roster form is remembered in this browser only; storage may be blocked, which is fine
+  const FIELDS = ['leagueId', 'teamName', 'myRoster', 'freeAgents'];
+  function remember(data) {
+    try { FIELDS.forEach(f => localStorage.setItem('scout.' + f, data.get(f) || '')); } catch (e) { /* not stored */ }
+  }
+  try {
+    FIELDS.forEach(f => { const v = localStorage.getItem('scout.' + f); if (v) rosterForm.elements[f].value = v; });
+  } catch (e) { /* nothing remembered */ }
+
+  document.getElementById('hot-form').requestSubmit();
+</script>
+</body>
+</html>
