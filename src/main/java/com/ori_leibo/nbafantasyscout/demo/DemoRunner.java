@@ -84,7 +84,7 @@ class DemoRunner implements CommandLineRunner {
     @Override
     public void run(String... args) {
         System.out.println("\n=== 1. Daily sync: ESPN players + game logs, Sleeper trending -> DB");
-        SyncService.Result result = sync.syncDaily();
+        SyncService.Result result = sync.syncDaily("demo");
         System.out.printf("  %d players, %d game logs new or changed, last season fetched for %d, %d failed players,"
                         + " %d snapshots, took %d s%n",
                 result.players(), result.gamesChanged(), result.lastSeasonFetched(), result.failedPlayers(), result.snapshots(),

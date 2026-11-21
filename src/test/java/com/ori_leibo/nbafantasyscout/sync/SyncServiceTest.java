@@ -53,7 +53,7 @@ class SyncServiceTest {
         when(gameLogSync.sync(ROSTER)).thenReturn(new GameLogSync.Result(5, 1, 1));
         when(trendingSync.sync(ROSTER, NOW)).thenReturn(3);
 
-        SyncService.Result result = sync.syncDaily();
+        SyncService.Result result = sync.syncDaily("sync-test");
 
         assertEquals(List.of(2, 5, 1, 1, 3), List.of(result.players(), result.gamesChanged(), result.lastSeasonFetched(),
                 result.failedPlayers(), result.snapshots()));
@@ -66,7 +66,7 @@ class SyncServiceTest {
         when(nba.fetchPlayers()).thenReturn(ROSTER);
         when(gameLogSync.sync(ROSTER)).thenThrow(new IllegalStateException("Sync aborted; ESPN looks down"));
 
-        assertThrows(IllegalStateException.class, () -> sync.syncDaily());
+        assertThrows(IllegalStateException.class, () -> sync.syncDaily("sync-test"));
 
         verifyNoInteractions(trendingSync);
         assertEquals(List.of(new SyncCompletedEvent(null)), events,
@@ -77,7 +77,7 @@ class SyncServiceTest {
     void refusesAnEmptyRosterInsteadOfClearingEveryTeam() {
         when(nba.fetchPlayers()).thenReturn(List.of());
 
-        assertThrows(IllegalStateException.class, () -> sync.syncDaily());
+        assertThrows(IllegalStateException.class, () -> sync.syncDaily("sync-test"));
 
         verify(players, never()).clearTeamExcept(anyList());
         verifyNoInteractions(gameLogSync, trendingSync);

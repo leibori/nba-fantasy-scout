@@ -30,7 +30,11 @@ class SyncJobsTest {
 
     @Test
     void aStartWhileRunningGetsTheSameJobAndAFinishedJobFreesTheSlot() {
-        SyncJobs jobs = new SyncJobs(() -> RESULT, tasks::add, CLOCK);
+        List<String> loggedUnder = new ArrayList<>();
+        SyncJobs jobs = new SyncJobs(id -> {
+            loggedUnder.add(id);
+            return RESULT;
+        }, tasks::add, CLOCK);
 
         SyncJobs.Job first = jobs.start();
         assertEquals(SyncJobs.Status.RUNNING, first.status());
@@ -42,13 +46,15 @@ class SyncJobsTest {
         assertEquals(SyncJobs.Status.DONE, done.status());
         assertEquals(RESULT, done.result());
         assertNotNull(done.finishedAt());
+        // the sync logs under the job id, so a job's logs can be found by it
+        assertEquals(List.of(first.id()), loggedUnder);
 
         assertNotEquals(first.id(), jobs.start().id());
     }
 
     @Test
     void aSyncThatFailsOrCannotStartFreesTheSlot() {
-        SyncJobs jobs = new SyncJobs(() -> {
+        SyncJobs jobs = new SyncJobs(id -> {
             throw new IllegalStateException("ESPN returned no players");
         }, tasks::add, CLOCK);
 
@@ -61,7 +67,7 @@ class SyncJobsTest {
 
         // a full executor: the job never runs, so start has to free the slot itself
         boolean[] reject = {true};
-        SyncJobs rejecting = new SyncJobs(() -> RESULT, task -> {
+        SyncJobs rejecting = new SyncJobs(id -> RESULT, task -> {
             if (reject[0]) {
                 throw new RejectedExecutionException("busy");
             }
@@ -73,7 +79,7 @@ class SyncJobsTest {
 
     @Test
     void manyCallersAtOnceStartOneSync() throws Exception {
-        SyncJobs jobs = new SyncJobs(() -> RESULT, tasks::add, CLOCK);
+        SyncJobs jobs = new SyncJobs(id -> RESULT, tasks::add, CLOCK);
         int callers = 16;
         Set<String> ids = ConcurrentHashMap.newKeySet();
         CountDownLatch go = new CountDownLatch(1);

@@ -9,7 +9,7 @@ import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.Executor;
 import java.util.concurrent.atomic.AtomicReference;
-import java.util.function.Supplier;
+import java.util.function.Function;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -30,7 +30,7 @@ public class SyncJobs {
                       String error) {
     }
 
-    private final Supplier<SyncService.Result> sync;
+    private final Function<String, SyncService.Result> sync;
     private final Executor executor;
     private final Clock clock;
     private final AtomicReference<Job> running = new AtomicReference<>();
@@ -42,7 +42,8 @@ public class SyncJobs {
         }
     });
 
-    public SyncJobs(Supplier<SyncService.Result> sync, Executor executor, Clock clock) {
+    /** {@code sync} runs one sync and logs under the id it is given: the job id, so a job's logs can be found by it. */
+    public SyncJobs(Function<String, SyncService.Result> sync, Executor executor, Clock clock) {
         this.sync = sync;
         this.executor = executor;
         this.clock = clock;
@@ -50,7 +51,8 @@ public class SyncJobs {
 
     /** The new job, or the one already running. */
     public Job start() {
-        Job job = new Job(UUID.randomUUID().toString(), Status.RUNNING, clock.instant(), null, null, null);
+        Job job = new Job("sync-" + UUID.randomUUID().toString().substring(0, 8), Status.RUNNING, clock.instant(),
+                null, null, null);
         while (true) {
             Job current = running.get();
             if (current != null) {
@@ -80,7 +82,7 @@ public class SyncJobs {
 
     private void run(Job job) {
         try {
-            jobs.put(job.id(), finished(job, Status.DONE, sync.get(), null));
+            jobs.put(job.id(), finished(job, Status.DONE, sync.apply(job.id()), null));
             log.info("Sync job {} done", job.id());
         } catch (RuntimeException e) {
             log.error("Sync job {} failed", job.id(), e);

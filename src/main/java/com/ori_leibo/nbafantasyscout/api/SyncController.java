@@ -22,6 +22,7 @@ public class SyncController {
         this.jobs = jobs;
     }
 
+    // TODO: anyone who can reach the server can start a sync; add a token check before deploying it publicly
     @Operation(summary = "Start the daily sync in the background (about 40 s); returns the job to poll. "
             + "While a sync runs, returns that one instead of starting another")
     @PostMapping("/daily")

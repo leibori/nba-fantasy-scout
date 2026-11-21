@@ -8,7 +8,6 @@ import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
-import java.util.UUID;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.slf4j.MDC;
@@ -51,9 +50,10 @@ public class SyncService {
     /**
      * Throws only when the sync cannot go on: no players from ESPN, or ESPN failing call after call.
      * A {@link SyncCompletedEvent} is published either way: an aborted sync has still stored new data.
+     * {@code correlationId} goes on every log line of this sync, so its logs can be found by it.
      */
-    public Result syncDaily() {
-        try (MDC.MDCCloseable ignored = MDC.putCloseable(CORRELATION_ID, "sync-" + UUID.randomUUID().toString().substring(0, 8))) {
+    public Result syncDaily(String correlationId) {
+        try (MDC.MDCCloseable ignored = MDC.putCloseable(CORRELATION_ID, correlationId)) {
             Result result = null;
 
             try {
