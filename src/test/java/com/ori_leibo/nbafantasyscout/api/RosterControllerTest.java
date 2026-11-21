@@ -2,6 +2,8 @@ package com.ori_leibo.nbafantasyscout.api;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyList;
+import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -19,6 +21,7 @@ import com.ori_leibo.nbafantasyscout.roster.Recommendation;
 import com.ori_leibo.nbafantasyscout.roster.RosterService;
 import com.ori_leibo.nbafantasyscout.roster.RosterService.PlayerAdvice;
 import com.ori_leibo.nbafantasyscout.roster.RosterService.RosterAdvice;
+import com.ori_leibo.nbafantasyscout.roster.YahooLeagueService;
 import com.ori_leibo.nbafantasyscout.trend.FormClassifier.Form;
 import java.util.List;
 import java.util.Map;
@@ -48,6 +51,8 @@ class RosterControllerTest {
     private RosterService rosterService;
     @MockitoBean
     private RecommendationService recommendations;
+    @MockitoBean
+    private YahooLeagueService yahoo;
 
     @Test
     void returnsAdvicePerNameWithTheReplacementOnADrop() throws Exception {
@@ -67,17 +72,40 @@ class RosterControllerTest {
                 .andExpect(jsonPath("$.roster[0].player.name").value("Zach Edey"))
                 .andExpect(jsonPath("$.roster[0].replacement.value").value(0.9))
                 .andExpect(jsonPath("$.pickUpNow[0].name").value("Waiver Guard"))
-                .andExpect(jsonPath("$.unmatched").isEmpty());
+                .andExpect(jsonPath("$.unmatched").isEmpty())
+                .andExpect(jsonPath("$.warnings").isEmpty());
     }
 
     @Test
-    void aMissingOrEmptyRosterIsA400() throws Exception {
+    void aYahooTeamIsAdvisedInItsLeaguesFormatWithItsWarnings() throws Exception {
+        when(yahoo.read(246889, "My Team")).thenReturn(new YahooLeagueService.LeagueTeam(new LeagueScoring.Categories(),
+                List.of("Zach Edey"), List.of("Waiver Guard"), List.of("The league scores DD, which is not counted")));
+        when(rosterService.advise(List.of("Zach Edey"), List.of("Waiver Guard"), new LeagueScoring.Categories()))
+                .thenReturn(new RosterAdvice(List.of(new PlayerAdvice("Zach Edey", EDEY, false,
+                        new Recommendation.Keep("Form: GOOD"))), List.of(), List.of()));
+
+        mvc.perform(post("/api/v1/roster/from-yahoo").contentType(MediaType.APPLICATION_JSON).content("""
+                        {"leagueId": 246889, "teamName": "My Team"}"""))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.roster[0].advice").value("KEEP"))
+                .andExpect(jsonPath("$.warnings[0]").value("The league scores DD, which is not counted"));
+    }
+
+    @Test
+    void aMissingRosterOrLeagueIsA400() throws Exception {
         mvc.perform(post("/api/v1/roster").contentType(MediaType.APPLICATION_JSON).content("""
                         {"myRoster": []}"""))
                 .andExpect(status().isBadRequest());
         mvc.perform(post("/api/v1/roster").contentType(MediaType.APPLICATION_JSON).content("{}"))
                 .andExpect(status().isBadRequest());
+        mvc.perform(post("/api/v1/roster/from-yahoo").contentType(MediaType.APPLICATION_JSON).content("""
+                        {"leagueId": 246889, "teamName": " "}"""))
+                .andExpect(status().isBadRequest());
+        mvc.perform(post("/api/v1/roster/from-yahoo").contentType(MediaType.APPLICATION_JSON).content("""
+                        {"teamName": "My Team"}"""))
+                .andExpect(status().isBadRequest());
 
         verify(rosterService, never()).advise(anyList(), anyList(), any());
+        verify(yahoo, never()).read(anyLong(), anyString());
     }
 }
