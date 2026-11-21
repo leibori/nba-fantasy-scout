@@ -17,6 +17,7 @@ import com.ori_leibo.nbafantasyscout.roster.RosterService.RosterAdvice;
 import com.ori_leibo.nbafantasyscout.trend.FormClassifier.Form;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -57,7 +58,7 @@ class RosterServiceTest {
 
     @Test
     void withoutAFreeAgentListEveryOtherPlayerIsAvailableAndEachReplacementIsSuggestedOnce() {
-        RosterAdvice advice = service.advise(List.of("cooper flagg", "Paul Reed", "Zach Edey"), List.of(), POINTS);
+        RosterAdvice advice = service.advise(List.of("cooper flagg", "Paul Reed", "Zach Edey"), List.of(), Map.of(), false, POINTS);
 
         // input order kept; the weakest (Edey) gets the best free agent, Reed the next one
         assertEquals(List.of("cooper flagg", "Paul Reed", "Zach Edey"), advice.roster().stream().map(PlayerAdvice::name).toList());
@@ -73,7 +74,7 @@ class RosterServiceTest {
     @Test
     void onlyTheGivenFreeAgentsCountAndWeakMatchesAreFlaggedOrLeftOut() {
         RosterAdvice advice = service.advise(List.of("Zak Edy", "Paul Reed", " "),
-                List.of("Hot Rookie", "Nobody At All"), POINTS);
+                List.of("Hot Rookie", "Nobody At All"), Map.of(), false, POINTS);
 
         // a weak roster match is still the user's player, so it is kept and flagged
         PlayerAdvice edey = advice.roster().get(0);
@@ -87,5 +88,22 @@ class RosterServiceTest {
         // a blank name matches nobody; a weak free agent match is never suggested
         assertEquals(List.of(" ", "Nobody At All"), advice.unmatched());
         assertEquals(List.of(HOT_ROOKIE), advice.pickUpNow());
+    }
+
+    @Test
+    void samePositionReplacesOnlyWithAFreeAgentSharingAPosition() {
+        Map<String, Set<String>> positions = Map.of("Zach Edey", Set.of("C"),
+                "Waiver Guard", Set.of("PG", "SG"), "Second Option", Set.of("PF", "C"));
+
+        RosterAdvice any = service.advise(List.of("Zach Edey"), List.of("Waiver Guard", "Second Option"), positions,
+                false, POINTS);
+        RosterAdvice same = service.advise(List.of("Zach Edey"), List.of("Waiver Guard", "Second Option"), positions,
+                true, POINTS);
+
+        assertEquals(WAIVER_GUARD, assertInstanceOf(Recommendation.Drop.class, any.roster().get(0).recommendation()).replacement());
+        // the guard is worth more, but only the PF/C can fill Edey's C spot
+        assertEquals(SECOND_OPTION, assertInstanceOf(Recommendation.Drop.class, same.roster().get(0).recommendation()).replacement());
+        // pick up now has no dropped player to match, so positions don't filter it
+        assertEquals(List.of(WAIVER_GUARD, SECOND_OPTION), same.pickUpNow());
     }
 }

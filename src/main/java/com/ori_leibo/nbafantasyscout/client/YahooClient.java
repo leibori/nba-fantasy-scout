@@ -46,23 +46,23 @@ public class YahooClient {
         return mapper.teams(http.get("%s/league/nba.l.%d/teams?format=json".formatted(baseUrl, leagueId)));
     }
 
-    public List<String> roster(String teamKey) {
-        return mapper.playerNames(http.get("%s/team/%s/roster?format=json".formatted(baseUrl, teamKey)));
+    public List<YahooMapper.NamedPlayer> roster(String teamKey) {
+        return mapper.players(http.get("%s/team/%s/roster?format=json".formatted(baseUrl, teamKey)));
     }
 
     /** Available players, Yahoo's actual-rank order (best first), up to {@code maxFreeAgents}. */
-    public List<String> freeAgents(long leagueId) {
-        List<String> names = new ArrayList<>();
+    public List<YahooMapper.NamedPlayer> freeAgents(long leagueId) {
+        List<YahooMapper.NamedPlayer> players = new ArrayList<>();
         for (int start = 0; start < maxFreeAgents; start += PAGE_SIZE) {
-            List<String> page = mapper.playerNames(http.get(
+            List<YahooMapper.NamedPlayer> page = mapper.players(http.get(
                     "%s/league/nba.l.%d/players;status=A;sort=AR;start=%d;count=%d?format=json"
                             .formatted(baseUrl, leagueId, start, Math.min(PAGE_SIZE, maxFreeAgents - start))));
-            names.addAll(page);
+            players.addAll(page);
             if (page.size() < PAGE_SIZE) {
                 break; // past the last free agent
             }
         }
-        log.info("Fetched {} free agents from Yahoo league {}", names.size(), leagueId);
-        return names;
+        log.info("Fetched {} free agents from Yahoo league {}", players.size(), leagueId);
+        return players;
     }
 }

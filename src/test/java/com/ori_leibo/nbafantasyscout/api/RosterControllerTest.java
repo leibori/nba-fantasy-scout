@@ -1,8 +1,10 @@
 package com.ori_leibo.nbafantasyscout.api;
 
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.ArgumentMatchers.anyMap;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -25,6 +27,7 @@ import com.ori_leibo.nbafantasyscout.roster.YahooLeagueService;
 import com.ori_leibo.nbafantasyscout.trend.FormClassifier.Form;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
@@ -57,7 +60,7 @@ class RosterControllerTest {
     @Test
     void returnsAdvicePerNameWithTheReplacementOnADrop() throws Exception {
         when(recommendations.defaultScoring()).thenReturn(POINTS);
-        when(rosterService.advise(List.of("zach edey"), List.of(), POINTS)).thenReturn(new RosterAdvice(
+        when(rosterService.advise(List.of("zach edey"), List.of(), Map.of(), false, POINTS)).thenReturn(new RosterAdvice(
                 List.of(new PlayerAdvice("zach edey", EDEY, false,
                         new Recommendation.Drop(WAIVER_GUARD, "Waiver Guard is worth 1.10 more"))),
                 List.of(WAIVER_GUARD), List.of()));
@@ -79,13 +82,15 @@ class RosterControllerTest {
     @Test
     void aYahooTeamIsAdvisedInItsLeaguesFormatWithItsWarnings() throws Exception {
         when(yahoo.read(246889, "My Team")).thenReturn(new YahooLeagueService.LeagueTeam(new LeagueScoring.Categories(),
-                List.of("Zach Edey"), List.of("Waiver Guard"), List.of("The league scores DD, which is not counted")));
-        when(rosterService.advise(List.of("Zach Edey"), List.of("Waiver Guard"), new LeagueScoring.Categories()))
+                List.of("Zach Edey"), List.of("Waiver Guard"), Map.of("Zach Edey", Set.of("C")),
+                List.of("The league scores DD, which is not counted")));
+        when(rosterService.advise(List.of("Zach Edey"), List.of("Waiver Guard"), Map.of("Zach Edey", Set.of("C")), true,
+                new LeagueScoring.Categories()))
                 .thenReturn(new RosterAdvice(List.of(new PlayerAdvice("Zach Edey", EDEY, false,
                         new Recommendation.Keep("Form: GOOD"))), List.of(), List.of()));
 
         mvc.perform(post("/api/v1/roster/from-yahoo").contentType(MediaType.APPLICATION_JSON).content("""
-                        {"leagueId": 246889, "teamName": "My Team"}"""))
+                        {"leagueId": 246889, "teamName": "My Team", "samePosition": true}"""))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.roster[0].advice").value("KEEP"))
                 .andExpect(jsonPath("$.warnings[0]").value("The league scores DD, which is not counted"));
@@ -105,7 +110,7 @@ class RosterControllerTest {
                         {"teamName": "My Team"}"""))
                 .andExpect(status().isBadRequest());
 
-        verify(rosterService, never()).advise(anyList(), anyList(), any());
+        verify(rosterService, never()).advise(anyList(), anyList(), anyMap(), anyBoolean(), any());
         verify(yahoo, never()).read(anyLong(), anyString());
     }
 }

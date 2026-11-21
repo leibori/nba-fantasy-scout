@@ -14,6 +14,8 @@ import java.time.Clock;
 import java.time.Instant;
 import java.time.ZoneOffset;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
@@ -44,13 +46,14 @@ class YahooLeagueServiceTest {
     void readsTheTeamByNameIgnoringCaseAndSpaces() {
         when(yahoo.league(LEAGUE_ID)).thenReturn(league(2026));
         when(yahoo.teams(LEAGUE_ID)).thenReturn(TEAMS);
-        when(yahoo.roster("478.l.246889.t.2")).thenReturn(List.of("Cooper Flagg"));
-        when(yahoo.freeAgents(LEAGUE_ID)).thenReturn(List.of("Tari Eason"));
+        when(yahoo.roster("478.l.246889.t.2")).thenReturn(List.of(new YahooMapper.NamedPlayer("Cooper Flagg", Set.of("SF"))));
+        when(yahoo.freeAgents(LEAGUE_ID)).thenReturn(List.of(new YahooMapper.NamedPlayer("Tari Eason", Set.of("PF"))));
 
         YahooLeagueService.LeagueTeam team = service().read(LEAGUE_ID, "  givaat shmuel RABBIS ");
 
         assertEquals(new YahooLeagueService.LeagueTeam(new LeagueScoring.Categories(), List.of("Cooper Flagg"),
-                List.of("Tari Eason"), List.of("a warning")), team);
+                List.of("Tari Eason"), Map.of("Cooper Flagg", Set.of("SF"), "Tari Eason", Set.of("PF")),
+                List.of("a warning")), team);
     }
 
     @Test

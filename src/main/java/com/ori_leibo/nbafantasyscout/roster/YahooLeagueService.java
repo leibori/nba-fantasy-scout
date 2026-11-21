@@ -7,6 +7,10 @@ import com.ori_leibo.nbafantasyscout.domain.LeagueScoring;
 import java.time.Clock;
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 /**
  * A user's team in a public Yahoo league, checked before use: the league must be this season's (a Yahoo league id
@@ -22,8 +26,12 @@ public class YahooLeagueService {
         this.clock = clock;
     }
 
-    /** {@code warnings}: stats the league scores that the values leave out. */
-    public record LeagueTeam(LeagueScoring scoring, List<String> roster, List<String> freeAgents, List<String> warnings) {
+    /**
+     * {@code positions}: Yahoo's positions per roster and free agent name; {@code warnings}: stats the league scores
+     * that the values leave out.
+     */
+    public record LeagueTeam(LeagueScoring scoring, List<String> roster, List<String> freeAgents,
+                             Map<String, Set<String>> positions, List<String> warnings) {
     }
 
     /** Throws {@link IllegalArgumentException} with a message for the user when the league or team doesn't fit. */
@@ -42,6 +50,15 @@ public class YahooLeagueService {
                 .findFirst()
                 .orElseThrow(() -> new IllegalArgumentException("No team \"%s\" in Yahoo league %d; its teams are: %s"
                         .formatted(teamName, leagueId, String.join(", ", teams.stream().map(YahooMapper.Team::name).toList()))));
-        return new LeagueTeam(league.scoring(), yahoo.roster(team.key()), yahoo.freeAgents(leagueId), league.warnings());
+        List<YahooMapper.NamedPlayer> roster = yahoo.roster(team.key());
+        List<YahooMapper.NamedPlayer> freeAgents = yahoo.freeAgents(leagueId);
+        // two players with one name in a league is rare; the first one's positions are kept
+        Map<String, Set<String>> positions = Stream.concat(roster.stream(), freeAgents.stream())
+                .collect(Collectors.toMap(YahooMapper.NamedPlayer::name, YahooMapper.NamedPlayer::positions, (a, b) -> a));
+        return new LeagueTeam(league.scoring(), names(roster), names(freeAgents), positions, league.warnings());
+    }
+
+    private static List<String> names(List<YahooMapper.NamedPlayer> players) {
+        return players.stream().map(YahooMapper.NamedPlayer::name).toList();
     }
 }

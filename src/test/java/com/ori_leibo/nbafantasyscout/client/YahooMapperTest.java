@@ -10,6 +10,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
+import java.util.Set;
 import java.util.Map;
 import org.junit.jupiter.api.Test;
 
@@ -30,18 +31,20 @@ class YahooMapperTest {
     }
 
     @Test
-    void readsTeamsRosterAndFreeAgentNames() {
+    void readsTeamsRosterAndFreeAgentsWithTheirPositions() {
         List<YahooMapper.Team> teams = mapper.teams(fixture("teams.json"));
         assertEquals(10, teams.size());
         assertTrue(teams.contains(new YahooMapper.Team("478.l.246889.t.2", "Givaat Shmuel Rabbis")));
 
-        List<String> roster = mapper.playerNames(fixture("roster.json"));
+        List<YahooMapper.NamedPlayer> roster = mapper.players(fixture("roster.json"));
         assertEquals(13, roster.size());
-        assertTrue(roster.containsAll(List.of("Cooper Flagg", "Zach Edey", "P.J. Washington")));
+        assertTrue(roster.stream().map(YahooMapper.NamedPlayer::name).toList()
+                .containsAll(List.of("Cooper Flagg", "Zach Edey", "P.J. Washington")));
+        assertTrue(roster.contains(new YahooMapper.NamedPlayer("Cooper Flagg", Set.of("SG", "SF", "PF"))));
 
-        List<String> freeAgents = mapper.playerNames(fixture("free-agents.json"));
+        List<YahooMapper.NamedPlayer> freeAgents = mapper.players(fixture("free-agents.json"));
         assertEquals(25, freeAgents.size());
-        assertEquals("Tari Eason", freeAgents.get(0));
+        assertEquals("Tari Eason", freeAgents.get(0).name());
     }
 
     @Test
@@ -70,7 +73,7 @@ class YahooMapperTest {
     @Test
     void anUnknownFormatIsRefusedAndAnEmptyPageHasNoPlayers() {
         assertThrows(IllegalArgumentException.class, () -> mapper.league(settings("survivor", stat(12, "PTS", null), "")));
-        assertEquals(List.of(), mapper.playerNames("{\"fantasy_content\": {\"league\": [{}, {\"players\": []}]}}"));
+        assertEquals(List.of(), mapper.players("{\"fantasy_content\": {\"league\": [{}, {\"players\": []}]}}"));
     }
 
     private static String settings(String scoringType, String stats, String modifiers) {

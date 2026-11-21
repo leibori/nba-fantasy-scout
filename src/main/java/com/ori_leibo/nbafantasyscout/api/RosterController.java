@@ -9,6 +9,7 @@ import com.ori_leibo.nbafantasyscout.roster.YahooLeagueService;
 import io.swagger.v3.oas.annotations.Operation;
 import jakarta.validation.Valid;
 import java.util.List;
+import java.util.Map;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -32,8 +33,8 @@ public class RosterController {
             + "instead, plus free agents worth picking up now; scored in the configured league format")
     @PostMapping
     public RosterResponse advise(@Valid @RequestBody RosterRequest request) {
-        return RosterResponse.from(roster.advise(request.myRoster(), request.freeAgentsOrEmpty(),
-                recommendations.defaultScoring()), List.of());
+        return RosterResponse.from(roster.advise(request.myRoster(), request.freeAgentsOrEmpty(), Map.of(),
+                request.samePosition(), recommendations.defaultScoring()), List.of());
     }
 
     @Operation(summary = "The same advice for a team in a public Yahoo league: format, roster and free agents are "
@@ -41,6 +42,7 @@ public class RosterController {
     @PostMapping("/from-yahoo")
     public RosterResponse adviseFromYahoo(@Valid @RequestBody YahooRosterRequest request) {
         YahooLeagueService.LeagueTeam team = yahoo.read(request.leagueId(), request.teamName());
-        return RosterResponse.from(roster.advise(team.roster(), team.freeAgents(), team.scoring()), team.warnings());
+        return RosterResponse.from(roster.advise(team.roster(), team.freeAgents(), team.positions(),
+                request.samePosition(), team.scoring()), team.warnings());
     }
 }

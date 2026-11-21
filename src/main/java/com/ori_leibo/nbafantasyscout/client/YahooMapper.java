@@ -7,6 +7,7 @@ import java.util.EnumMap;
 import java.util.HashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.Map;
 import java.util.Set;
 import tools.jackson.databind.JsonNode;
@@ -36,6 +37,10 @@ public class YahooMapper {
     }
 
     public record Team(String key, String name) {
+    }
+
+    /** {@code positions}: the fantasy positions he can fill, e.g. PG and SG. */
+    public record NamedPlayer(String name, Set<String> positions) {
     }
 
     public League league(String settingsJson) {
@@ -97,13 +102,16 @@ public class YahooMapper {
         return result;
     }
 
-    /** Full names from a roster or a free agent page; an empty page (past the last free agent) gives none. */
-    public List<String> playerNames(String json) {
-        List<String> names = new ArrayList<>();
+    /** Players from a roster or a free agent page; an empty page (past the last free agent) gives none. */
+    public List<NamedPlayer> players(String json) {
+        List<NamedPlayer> players = new ArrayList<>();
         for (JsonNode player : list(JsonMapper.shared().readTree(json).findPath("players"), "player")) {
-            names.add(part(player.path(0), "name").path("full").asString(""));
+            JsonNode parts = player.path(0);
+            String positions = part(parts, "display_position").asString("");
+            players.add(new NamedPlayer(part(parts, "name").path("full").asString(""),
+                    positions.isEmpty() ? Set.of() : Set.of(positions.split(","))));
         }
-        return names;
+        return players;
     }
 
     // {"0": {"team": ...}, "1": {...}, "count": 2} -> the "team" of each entry; Yahoo sends [] when there are none
