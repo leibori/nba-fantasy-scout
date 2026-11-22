@@ -18,7 +18,8 @@ public class RosterRules {
     private static final Set<Form> GOOD = EnumSet.of(Form.HOT, Form.EARLY_HOT, Form.RETURNING, Form.GOOD);
 
     public static final List<RosterRule> DEFAULT_ORDER = List.of(
-            RosterRules::holdInjured, RosterRules::crowd, RosterRules::keepGood, RosterRules::replaceWeak);
+            RosterRules::holdInjured, RosterRules::notPlaying, RosterRules::crowd, RosterRules::keepGood,
+            RosterRules::replaceWeak);
 
     private final List<RosterRule> rules;
 
@@ -34,17 +35,26 @@ public class RosterRules {
                 .orElseGet(() -> new Recommendation.Watch("No clear call yet"));
     }
 
-    static boolean isOut(PlayerForm form) {
-        return "Out".equalsIgnoreCase(form.player().status());
-    }
 
     // ESPN gives a status, not how long he is out: hold him unless even a free agent is clearly better
     // (a star stays, a weak injured player falls through to replaceWeak)
     static Optional<Recommendation> holdInjured(PlayerForm player, FreeAgents freeAgents) {
-        if (isOut(player) && freeAgents.clearlyBetterThan(player).isEmpty()) {
+        if (player.player().isOut() && freeAgents.clearlyBetterThan(player).isEmpty()) {
             return Optional.of(new Recommendation.Keep("Out, but no free agent is clearly better: hold until he's back"));
         }
         return Optional.empty();
+    }
+
+    // not playing (and not held as injured above): his old numbers score nothing now, so any better free agent wins
+    static Optional<Recommendation> notPlaying(PlayerForm player, FreeAgents freeAgents) {
+        if (player.form() != Form.INACTIVE) {
+            return Optional.empty();
+        }
+        String missed = "hasn't played in his team's last %d games".formatted(player.teamGamesMissed());
+        return Optional.of(freeAgents.betterThan(player)
+                .<Recommendation>map(agent -> new Recommendation.Drop(agent,
+                        "%s is playing; %s %s".formatted(agent.player().name(), player.player().name(), missed)))
+                .orElseGet(() -> new Recommendation.Watch("He " + missed)));
     }
 
     // the crowd dropping him is evidence, judged against his stats: panic = hold, confirmed decline = swap

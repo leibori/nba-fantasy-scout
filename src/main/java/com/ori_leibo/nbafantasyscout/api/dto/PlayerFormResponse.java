@@ -2,6 +2,7 @@ package com.ori_leibo.nbafantasyscout.api.dto;
 
 import com.ori_leibo.nbafantasyscout.domain.Player;
 import com.ori_leibo.nbafantasyscout.recommend.TrendService.PlayerForm;
+import java.time.LocalDate;
 
 /**
  * A player's form as the API shows it. {@code hotScore}, {@code baselineSource}, {@code recent} and
@@ -10,7 +11,8 @@ import com.ori_leibo.nbafantasyscout.recommend.TrendService.PlayerForm;
 public record PlayerFormResponse(long id, String name, String team, String position, String injuryStatus,
                                  String form, int gamesThisSeason, Double value, Double hotScore,
                                  String baselineSource, boolean provisional,
-                                 StatLineResponse recent, StatLineResponse baseline, CrowdResponse crowd) {
+                                 StatLineResponse recent, StatLineResponse baseline, CrowdResponse crowd,
+                                 LocalDate lastGame, int teamGamesMissed) {
 
     public static PlayerFormResponse from(PlayerForm form) {
         Player player = form.player();
@@ -23,6 +25,7 @@ public record PlayerFormResponse(long id, String name, String team, String posit
                 hasTrend && form.trend().provisional(),
                 hasTrend ? StatLineResponse.from(form.trend().recent()) : null,
                 hasTrend ? StatLineResponse.from(form.trend().baseline()) : null,
-                CrowdResponse.from(form.crowdSignal(), form.crowd()));
+                CrowdResponse.from(form.crowdSignal(), form.crowd()),
+                form.lastGame(), form.teamGamesMissed());
     }
 }

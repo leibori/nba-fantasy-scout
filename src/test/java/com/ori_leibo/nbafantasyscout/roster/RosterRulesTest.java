@@ -7,6 +7,7 @@ import com.ori_leibo.nbafantasyscout.domain.Player;
 import com.ori_leibo.nbafantasyscout.recommend.CrowdSignal;
 import com.ori_leibo.nbafantasyscout.recommend.TrendService.PlayerForm;
 import com.ori_leibo.nbafantasyscout.trend.FormClassifier.Form;
+import java.time.LocalDate;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 
@@ -32,6 +33,8 @@ class RosterRulesTest {
             healthy("Deep Bench", -1.0, Form.NEUTRAL),
             WAIVER_GUARD,
             form("Injured Free Agent", "Out", 3.0, Form.GOOD, CrowdSignal.NONE),
+            // healthy but not playing: never a replacement either, however good his old numbers
+            form("Benched Free Agent", null, 5.0, Form.INACTIVE, CrowdSignal.NONE),
             form("No Games Yet", null, null, Form.NEUTRAL, CrowdSignal.NONE)), GAP);
 
     @Test
@@ -65,6 +68,21 @@ class RosterRulesTest {
         // day-to-day is judged like a healthy player
         assertEquals(new Recommendation.Keep("Form: GOOD"),
                 RULES.recommend(form("Sore Ankle", "Day-To-Day", 2.0, Form.GOOD, CrowdSignal.NONE), FREE_AGENTS));
+    }
+
+    @Test
+    void aPlayerWhoStoppedPlayingIsSwappedForAnyBetterFreeAgent() {
+        // 0.8 vs 0.5 is under the gap, but his 0.5 comes from games he no longer plays
+        PlayerForm benched = new PlayerForm(new Player(nextId++, "Benched", "LAL", "G", null, 3), 10, null, null, 0.5,
+                Form.INACTIVE, null, CrowdSignal.NONE, LocalDate.of(2026, 11, 1), 4);
+        assertEquals(new Recommendation.Drop(WAIVER_GUARD, "Waiver Guard is playing; Benched hasn't played in his team's last 4 games"),
+                RULES.recommend(benched, FREE_AGENTS));
+
+        // nobody better on the wire: watch, and say why
+        PlayerForm benchedStar = new PlayerForm(new Player(nextId++, "Benched Star", "LAL", "G", null, 3), 10, null, null,
+                3.0, Form.INACTIVE, null, CrowdSignal.NONE, LocalDate.of(2026, 11, 1), 4);
+        assertEquals(new Recommendation.Watch("He hasn't played in his team's last 4 games"),
+                RULES.recommend(benchedStar, FREE_AGENTS));
     }
 
     @Test

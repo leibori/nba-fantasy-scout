@@ -5,4 +5,9 @@ package com.ori_leibo.nbafantasyscout.domain;
  * {@code experienceYears} is ESPN's count of earlier NBA seasons (0 = rookie), null when unknown.
  */
 public record Player(long id, String name, String team, String position, String status, Integer experienceYears) {
+
+    /** Listed as out by ESPN: not playing for now, however good he is. */
+    public boolean isOut() {
+        return "Out".equalsIgnoreCase(status);
+    }
 }

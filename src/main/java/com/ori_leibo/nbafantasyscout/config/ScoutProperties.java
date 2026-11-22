@@ -38,7 +38,7 @@ public record ScoutProperties(Espn espn, Sleeper sleeper, Yahoo yahoo, Http http
      */
     public record Trend(int window, int minBaselineGames, double minMinutes, double hotThreshold,
                         double earlyColdMinMinutes, double earlyColdMinMinutesDrop, double leagueMinMinutes,
-                        double percentageWeight) {
+                        double percentageWeight, int inactiveAfterMissedGames) {
     }
 
     public record HotStreak(double minutesWeight, double fieldGoalsAttemptedWeight, double opportunityWeight) {

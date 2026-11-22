@@ -135,11 +135,32 @@ class TrendServiceTest {
                 "the same rookie is high value in 9-cat, against its threshold of 1");
     }
 
-    // window 3, 5 baseline games, 15 minutes; hot at 0.15; high value 1 (9-cat) and 1.5 (points); league = 15+ minutes
+    @Test
+    void aPlayerWhoseTeamPlayedOnWithoutHimIsInactive() {
+        players.saveAllAndFlush(List.of(player(1, "Starter One", "LAL", 5), player(2, "Starter Two", "LAL", 5),
+                player(3, "Starter Three", "LAL", 5), player(4, "Benched", "LAL", 5)));
+        for (long starter = 1; starter <= 3; starter++) {
+            upsert.upsert(starter, games(2026, 10, 6, 30, 15));                        // October 1-6
+        }
+        upsert.upsert(4, games(2026, 10, 3, 30, 15));                                  // October 1-3, then nothing
+
+        Map<String, PlayerForm> forms = service().formOfAllPlayers(CATEGORIES).stream()
+                .collect(Collectors.toMap(form -> form.player().name(), form -> form));
+
+        PlayerForm benched = forms.get("Benched");
+        assertEquals(LocalDate.of(2026, 10, 3), benched.lastGame());
+        assertEquals(3, benched.teamGamesMissed());
+        assertEquals(Form.INACTIVE, benched.form(), "3 team games without him");
+        assertEquals(0, forms.get("Starter One").teamGamesMissed());
+        assertEquals(Form.NEUTRAL, forms.get("Starter One").form());
+    }
+
+    // window 3, 5 baseline games, 15 minutes; hot at 0.15; high value 1 (9-cat) and 1.5 (points); league = 15+ minutes;
+    // inactive after missing 3 team games
     private TrendService service() {
         SeasonData seasonData = new SeasonData(players, gameLogs, snapshots, new TrendCalculator(3, 5, 15),
                 new HotStreakScoring(0.4, 0.3, 0.3), CLOCK, 15);
-        return new TrendService(seasonData, new FormClassifier(0.15, 18, 0.15), 0.5, 1, 1.5);
+        return new TrendService(seasonData, new FormClassifier(0.15, 18, 0.15), 0.5, 1, 1.5, 3);
     }
 
     private static TrendingSnapshotEntity snapshot(long playerId, TrendingSnapshot.Type type, int count, String at) {

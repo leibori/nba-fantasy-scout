@@ -216,7 +216,7 @@ public class ScoutConfig {
     TrendService trendService(SeasonData seasonData, FormClassifier formClassifier, ScoutProperties properties) {
         ScoutProperties.Scoring.PerFormat highValue = properties.scoring().highValue();
         return new TrendService(seasonData, formClassifier, properties.trend().percentageWeight(),
-                highValue.categories(), highValue.points());
+                highValue.categories(), highValue.points(), properties.trend().inactiveAfterMissedGames());
     }
 
     @Bean

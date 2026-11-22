@@ -10,7 +10,8 @@ import java.util.OptionalDouble;
  */
 public class FormClassifier {
 
-    public enum Form { HOT, EARLY_HOT, RETURNING, GOOD, NEUTRAL, EARLY_COLD, COLD }
+    /** {@code INACTIVE}: has missed his team's recent games, so his last numbers say nothing about now. */
+    public enum Form { HOT, EARLY_HOT, RETURNING, GOOD, NEUTRAL, EARLY_COLD, COLD, INACTIVE }
 
     /** What the player did before this season; matters only while he has no trend yet. */
     public enum History { PLAYED_LAST_SEASON, ROOKIE, RETURNING }

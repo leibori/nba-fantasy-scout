@@ -57,6 +57,7 @@ scout:
     early-cold-min-minutes-drop: 0.15 # ... and only when his minutes fell at least 15% (fewer shots alone is noise)
     league-min-minutes: 15     # players averaging fewer minutes are left out of the value league
     percentage-weight: 0.5     # FG% / FT% share of the value; low because shooting is noisy in small samples
+    inactive-after-missed-games: 3 # missed his team's last 3 games = inactive: old form no longer counts
   hot-streak:
     minutes-weight: 0.4
     field-goals-attempted-weight: 0.3

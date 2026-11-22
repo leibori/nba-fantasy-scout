@@ -1,6 +1,7 @@
 package com.ori_leibo.nbafantasyscout.roster;
 
 import com.ori_leibo.nbafantasyscout.recommend.TrendService.PlayerForm;
+import com.ori_leibo.nbafantasyscout.trend.FormClassifier.Form;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Optional;
@@ -15,7 +16,7 @@ public record FreeAgents(List<PlayerForm> available, double dropGap) {
     public FreeAgents {
         // an injured free agent is never a replacement, and one without games can't be compared
         available = available.stream()
-                .filter(form -> form.value() != null && !RosterRules.isOut(form))
+                .filter(form -> form.value() != null && !form.player().isOut() && form.form() != Form.INACTIVE)
                 .sorted(Comparator.comparing(PlayerForm::value).reversed())
                 .toList();
     }

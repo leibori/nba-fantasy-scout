@@ -40,6 +40,8 @@ public enum CrowdSignal {
             case GOOD -> crowd == Crowd.DROPS ? PANIC_DROP : NONE;
             // a bench player being dropped is not panic
             case NEUTRAL -> crowd == Crowd.ADDS ? HYPE : NONE;
+            // not playing: being added or dropped says nothing about his form
+            case INACTIVE -> NONE;
         };
     }
 }

@@ -53,6 +53,9 @@ class RecommendationServiceTest {
                 form(4, Form.HOT, 3.0, null),
                 form(5, Form.EARLY_COLD, 1.0, null),
                 new PlayerForm(new Player(6, "Guard", "LAL", "G", null, 3), 4, null, null, 4.0, Form.HOT, null,
+                        CrowdSignal.NONE),
+                // rising, but out: can't help anyone now
+                new PlayerForm(new Player(7, "Injured Star", "LAL", "C", "Out", 3), 4, null, null, 8.0, Form.HOT, null,
                         CrowdSignal.NONE)));
 
         assertEquals(List.of(3L, 6L, 4L, 2L), recommendations.hot(10, null, null).stream().map(f -> f.player().id()).toList());

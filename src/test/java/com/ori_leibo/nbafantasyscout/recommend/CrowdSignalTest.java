@@ -34,5 +34,9 @@ class CrowdSignalTest {
         assertEquals(CrowdSignal.HYPE, CrowdSignal.of(Form.NEUTRAL, Crowd.ADDS));
         assertEquals(CrowdSignal.NONE, CrowdSignal.of(Form.NEUTRAL, Crowd.QUIET));
         assertEquals(CrowdSignal.NONE, CrowdSignal.of(Form.NEUTRAL, Crowd.DROPS));
+        // not playing: adds and drops say nothing about his form
+        for (Crowd crowd : Crowd.values()) {
+            assertEquals(CrowdSignal.NONE, CrowdSignal.of(Form.INACTIVE, crowd));
+        }
     }
 }

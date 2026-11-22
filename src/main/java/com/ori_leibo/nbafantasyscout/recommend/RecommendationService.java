@@ -43,7 +43,8 @@ public class RecommendationService {
      */
     public List<PlayerForm> hot(int limit, LeagueScoring.Format format, String position) {
         return trends.formOfAllPlayers(scoring(format == null ? defaultFormat : format)).stream()
-                .filter(form -> RISING.contains(form.form()))
+                // rising but listed as out can't help anyone now
+                .filter(form -> RISING.contains(form.form()) && !form.player().isOut())
                 .filter(form -> position == null || position.equals(form.player().position()))
                 .sorted(Comparator.comparing(PlayerForm::value, Comparator.nullsLast(Comparator.reverseOrder())))
                 .limit(limit)

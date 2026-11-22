@@ -17,6 +17,7 @@ import com.ori_leibo.nbafantasyscout.trend.TrendCalculator;
 import java.time.Clock;
 import java.time.LocalDate;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -58,8 +59,10 @@ public class SeasonData {
      * (this season's per-game averages) is null when he has no games this season; {@code crowd} is his row in the
      * latest Sleeper trending lists, null when he is in neither.
      */
+    /** {@code lastGame}: null with no game this season; {@code teamGamesMissed}: his team's games since then. */
     public record PlayerSeason(Player player, int gamesThisSeason, Trend trend, Double hotScore, StatLine line,
-                               FormClassifier.History history, TrendingSnapshot crowd) {
+                               FormClassifier.History history, TrendingSnapshot crowd, LocalDate lastGame,
+                               int teamGamesMissed) {
     }
 
     /** {@code league}: the per-game lines values are measured against (players with enough minutes). */
@@ -88,17 +91,26 @@ public class SeasonData {
                         Collectors.mapping(GameLogEntity::toGameLog, Collectors.toList())));
         Map<Long, TrendingSnapshot> crowdByPlayer = latestCrowd();
 
-        List<PlayerSeason> seasons = new ArrayList<>();
+        Map<Player, List<GameLog>> currentByPlayer = new LinkedHashMap<>();
         for (Player player : roster) {
-            List<GameLog> games = gamesByPlayer.getOrDefault(player.id(), List.of());
-            List<GameLog> current = games.stream().filter(game -> game.season() == season).toList();
-            List<GameLog> last = games.stream().filter(game -> game.season() == season - 1).toList();
+            currentByPlayer.put(player, gamesByPlayer.getOrDefault(player.id(), List.of()).stream()
+                    .filter(game -> game.season() == season).toList());
+        }
+        TeamGames teamGames = new TeamGames(currentByPlayer.entrySet().stream().collect(Collectors.toMap(
+                Map.Entry::getKey, entry -> entry.getValue().stream().map(GameLog::gameDate).toList())));
+
+        List<PlayerSeason> seasons = new ArrayList<>();
+        currentByPlayer.forEach((player, current) -> {
+            List<GameLog> last = gamesByPlayer.getOrDefault(player.id(), List.of()).stream()
+                    .filter(game -> game.season() == season - 1).toList();
             Trend trend = calculator.calculate(current, last).orElse(null);
+            LocalDate lastGame = current.stream().map(GameLog::gameDate).max(LocalDate::compareTo).orElse(null);
             seasons.add(new PlayerSeason(player, current.size(), trend,
                     trend == null ? null : hotScoring.score(trend),
                     current.isEmpty() ? null : StatLine.average(current),
-                    history(player, last), crowdByPlayer.get(player.id())));
-        }
+                    history(player, last), crowdByPlayer.get(player.id()),
+                    lastGame, teamGames.missedSince(player.team(), lastGame)));
+        });
         List<StatLine> league = seasons.stream()
                 .map(PlayerSeason::line)
                 .filter(line -> line != null && line.minutes() >= leagueMinMinutes)
