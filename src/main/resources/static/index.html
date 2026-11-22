@@ -125,13 +125,6 @@
   .link { background: none; border: 0; padding: 0; color: var(--cyan); cursor: pointer; font-weight: 600; font-size: 14px; }
   .link:hover { text-decoration: underline; }
 
-  /* how it works */
-  .steps { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; margin: 8px 0 10px; }
-  .step { display: flex; gap: 14px; align-items: flex-start; padding: 16px; border-radius: var(--radius); background: rgba(16,21,31,.55); border: 1px solid var(--line); }
-  .step b { font: 700 28px/1 var(--display); background: linear-gradient(180deg, var(--orange-2), var(--orange) 55%, var(--cyan)); -webkit-background-clip: text; background-clip: text; color: transparent; }
-  .step strong { display: block; font-size: 15px; }
-  .step span { color: var(--muted); font-size: 13.5px; }
-
   /* player cards */
   .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(290px, 1fr)); gap: 14px; }
   .card { position: relative; background: linear-gradient(180deg, var(--surface-2), var(--surface)); border: 1px solid var(--line);
@@ -198,6 +191,7 @@
   .tile.DROP .big { color: var(--red); } .tile.DROP::after { background: var(--red); }
   h2 { font: 700 21px/1 var(--display); text-transform: uppercase; letter-spacing: .04em; margin: 30px 0 12px; display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
   h2 small { font: 500 13px/1 "Inter", sans-serif; color: var(--muted); text-transform: none; letter-spacing: 0; }
+  h2 .link { margin-left: auto; font: 600 14px/1 "Inter", sans-serif; text-transform: none; letter-spacing: 0; }
   .advice { display: grid; grid-template-columns: 76px 1fr auto; gap: 14px; align-items: center; background: var(--surface);
             border: 1px solid var(--line); border-radius: 14px; padding: 12px 14px; margin-bottom: 8px; animation: rise .4s both; animation-delay: calc(var(--i, 0) * 35ms); }
   .verdict { font: 700 13px/1 var(--display); letter-spacing: .1em; text-align: center; padding: 8px 0; border-radius: 9px; }
@@ -243,7 +237,6 @@
     .scene { margin: 14px -16px 0; }
     .lead { font-size: 15.5px !important; }
     .brand img { height: 38px; }
-    .steps { grid-template-columns: 1fr; }
     .row { grid-template-columns: 30px 1fr 70px; }
     .row .bar-track { display: none; }
     .tile .big { font-size: 30px; }
@@ -309,12 +302,7 @@
       </div>
       <div class="scene"><img src="/img/scout-hero.webp" alt="The Fantasy Scout mascot studying player stats" width="900" height="503"></div>
     </div>
-    <div class="out">
-      <div class="steps">
-        <div class="step"><b>01</b><div><strong>Hand over your roster</strong><span>A public Yahoo league id, or names typed in.</span></div></div>
-        <div class="step"><b>02</b><div><strong>The scout investigates</strong><span>Last 3 games against each player's own baseline, for 500+ players, every morning.</span></div></div>
-        <div class="step"><b>03</b><div><strong>Get the verdict</strong><span>Keep, watch or drop, with the steal to grab instead.</span></div></div>
-      </div>
+    <div class="out"></div>
     </div>
   </section>
 
@@ -503,9 +491,19 @@
       const track = document.querySelector('.ticker .track');
       track.replaceChildren(...players.map(item), ...players.map(item));
       document.querySelector('.ticker').classList.remove('hidden');
+      // the showcase skips injured players: "heating up" next to an OUT tag reads as a mistake
+      showPreview(players.filter(p => !p.injuryStatus).slice(0, 3));
     } catch (e) { /* the ticker is extra; the page works without it */ }
   }
   document.querySelector('.ticker').addEventListener('click', () => show('hot'));
+
+  // until the user scouts a team, the space under the form shows real output: who is heating up today
+  function showPreview(players) {
+    if (teamOut.childElementCount) return; // results (or their loading state) are already there
+    const seeAll = h('button', { type: 'button', class: 'link' }, 'See all →');
+    seeAll.addEventListener('click', () => show('hot'));
+    teamOut.replaceChildren(h('h2', null, 'Heating up today', h('small', null, 'rising in their last 3 games'), seeAll), cards(players));
+  }
 
   // heating up
   const hotOut = document.querySelector('#hot .out');
