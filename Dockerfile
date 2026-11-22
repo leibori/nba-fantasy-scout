@@ -3,6 +3,8 @@ FROM eclipse-temurin:21-jdk AS build
 WORKDIR /app
 COPY gradlew settings.gradle.kts build.gradle.kts ./
 COPY gradle gradle
+# a checkout from Windows may lose the executable bit
+RUN chmod +x gradlew
 # dependencies first, in their own layer: a code change doesn't download them again
 RUN ./gradlew --no-daemon dependencies > /dev/null
 COPY src src
