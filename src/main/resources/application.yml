@@ -80,6 +80,10 @@ scout:
     pick-up-now: 10            # free agents suggested by the roster advice
   limits:
     roster-per-minute: 10      # roster checks per visitor per minute; a Yahoo league check makes ~9 Yahoo calls
+  keep-awake:
+    # the site's own public address, opened every 10 minutes so a free host never puts it to sleep; Render sets
+    # RENDER_EXTERNAL_URL by itself, so this is on there and off locally and in the tests
+    url: ${SCOUT_KEEP_AWAKE_URL:${RENDER_EXTERNAL_URL:}}
 
 logging:
   pattern:

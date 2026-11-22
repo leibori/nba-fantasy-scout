@@ -164,6 +164,11 @@ public class ScoutConfig {
     }
 
     @Bean
+    KeepAwake keepAwake(HttpClient httpClient, ScoutProperties properties) {
+        return new KeepAwake(httpClient, properties.keepAwake().url());
+    }
+
+    @Bean
     SecurityHeadersFilter securityHeadersFilter() {
         return new SecurityHeadersFilter();
     }
