@@ -1,0 +1,24 @@
+name: Keep awake
+
+# The free server sleeps after 15 minutes without a visit, and the next visitor then waits about a minute on a blank
+# page. Opening the page every 10 minutes keeps it awake. The page is a static file, so this never touches the
+# database, which keeps sleeping between real uses. Off the top of the hour, when GitHub's scheduled runs are busiest.
+on:
+  schedule:
+    - cron: "4,14,24,34,44,54 * * * *"
+  workflow_dispatch:
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - name: Open the site
+        env:
+          URL: ${{ vars.SCOUT_URL }}
+        run: |
+          if [ -z "$URL" ]; then
+            echo "::warning::Set the SCOUT_URL variable to keep the site awake"
+            exit 0
+          fi
+          curl -sS -o /dev/null --max-time 120 --retry 2 -w "HTTP %{http_code} in %{time_total}s\n" "$URL/"
