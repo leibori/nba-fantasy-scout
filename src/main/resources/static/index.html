@@ -12,10 +12,19 @@
 <meta property="og:title" content="Fantasy Scout">
 <meta property="og:description" content="Scout your NBA fantasy roster: keep, watch or drop, and the free agents heating up right now.">
 <meta property="og:image" content="https://nba-fantasy-scout-1.onrender.com/img/icon-180.png">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700&family=Big+Shoulders+Display:wght@700;800;900&display=swap" rel="stylesheet">
+<link rel="preload" href="/fonts/BigShouldersDisplay-900.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="/fonts/Archivo-400.woff2" as="font" type="font/woff2" crossorigin>
 <style>
+  /* Fonts served from here, one static file per weight (Latin): every browser gets the right weight, even one
+     without variable-font support, and no visitor request goes to a third party. Both fonts: SIL Open Font License. */
+  @font-face { font-family: "Archivo"; font-weight: 400; font-style: normal; font-display: swap; src: url(/fonts/Archivo-400.woff2) format("woff2"); }
+  @font-face { font-family: "Archivo"; font-weight: 500; font-style: normal; font-display: swap; src: url(/fonts/Archivo-500.woff2) format("woff2"); }
+  @font-face { font-family: "Archivo"; font-weight: 600; font-style: normal; font-display: swap; src: url(/fonts/Archivo-600.woff2) format("woff2"); }
+  @font-face { font-family: "Archivo"; font-weight: 700; font-style: normal; font-display: swap; src: url(/fonts/Archivo-700.woff2) format("woff2"); }
+  @font-face { font-family: "Big Shoulders Display"; font-weight: 700; font-style: normal; font-display: swap; src: url(/fonts/BigShouldersDisplay-700.woff2) format("woff2"); }
+  @font-face { font-family: "Big Shoulders Display"; font-weight: 800; font-style: normal; font-display: swap; src: url(/fonts/BigShouldersDisplay-800.woff2) format("woff2"); }
+  @font-face { font-family: "Big Shoulders Display"; font-weight: 900; font-style: normal; font-display: swap; src: url(/fonts/BigShouldersDisplay-900.woff2) format("woff2"); }
+
   /* Tokens. Navy from the logo's own background, the ball's orange for the one main action and the verdicts,
      the outline's cyan for focus and links only. Type scale on a 1.25 ratio from 16px. */
   :root {
