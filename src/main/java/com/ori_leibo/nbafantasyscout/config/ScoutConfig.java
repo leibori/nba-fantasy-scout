@@ -164,6 +164,17 @@ public class ScoutConfig {
     }
 
     @Bean
+    SecurityHeadersFilter securityHeadersFilter() {
+        return new SecurityHeadersFilter();
+    }
+
+    @Bean
+    RosterRateLimitFilter rosterRateLimitFilter(Clock clock, ScoutProperties properties) {
+        int perMinute = properties.limits().rosterPerMinute();
+        return new RosterRateLimitFilter(new ClientRequestLimit(perMinute, Duration.ofMinutes(1), clock), perMinute);
+    }
+
+    @Bean
     TrendCacheRefresher trendCacheRefresher(CacheManager cacheManager, SeasonData seasonData) {
         // looked up once, so a wrong cache name fails at startup, not at the end of a sync
         Cache cache = Objects.requireNonNull(cacheManager.getCache(SeasonData.CACHE), "no cache " + SeasonData.CACHE);

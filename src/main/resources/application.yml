@@ -78,6 +78,8 @@ scout:
       points: 0.5
   roster:
     pick-up-now: 10            # free agents suggested by the roster advice
+  limits:
+    roster-per-minute: 10      # roster checks per visitor per minute; a Yahoo league check makes ~9 Yahoo calls
 
 logging:
   pattern:

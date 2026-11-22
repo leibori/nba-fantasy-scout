@@ -9,7 +9,7 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 /** Everything under {@code scout:} in application.yml, bound once at startup. */
 @ConfigurationProperties("scout")
 public record ScoutProperties(Espn espn, Sleeper sleeper, Yahoo yahoo, Http http, Sync sync, Matcher matcher, Trend trend, HotStreak hotStreak,
-                             Scoring scoring, Roster roster) {
+                             Scoring scoring, Roster roster, Limits limits) {
 
     public record Espn(String teamsBaseUrl, String gameLogBaseUrl, Duration timeout, int maxCallsPerSecond) {
     }
@@ -58,5 +58,9 @@ public record ScoutProperties(Espn espn, Sleeper sleeper, Yahoo yahoo, Http http
 
     /** {@code pickUpNow}: how many free agents the roster advice suggests picking up. */
     public record Roster(int pickUpNow) {
+    }
+
+    /** {@code rosterPerMinute}: roster checks one visitor may run per minute. */
+    public record Limits(int rosterPerMinute) {
     }
 }
