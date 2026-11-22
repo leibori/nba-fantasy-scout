@@ -60,44 +60,20 @@ margin set per format so that noise doesn't trigger swaps.
 
 ## Under the hood
 
-```mermaid
-flowchart TD
-    subgraph daily["Every morning"]
-        ESPN["ESPN<br>rosters, injuries, game logs"] --> SYNC["Sync<br>8 threads, rate limited, retries"]
-        SLEEPER["Sleeper<br>adds and drops"] --> SYNC
-        SYNC -->|"idempotent upsert"| DB[("PostgreSQL")]
-    end
-    SYNC -.->|"SyncCompletedEvent"| CACHE
-    DB --> CACHE["Season snapshot<br>Caffeine cache"]
-    CACHE --> TREND["Form and value<br>per league format"]
-    TREND --> HOT["Hot list,<br>category risers"]
-    TREND --> ROSTER["Roster advice<br>name matching, rule chain"]
-    YAHOO["Yahoo public league<br>format, roster, free agents"] -->|"live, per request"| ROSTER
-    HOT --> API["REST API"]
-    ROSTER --> API
-    API --> WEB["Web page"]
-```
+<p align="center">
+  <img src="docs/images/architecture.webp" alt="Architecture: every morning a sync pulls ESPN and Sleeper data into PostgreSQL; every request is served from a cached season snapshot, with Yahoo leagues read live" width="900">
+</p>
 
-**Engineering highlights**
-
-- **Concurrent ingestion:** game logs for ~525 players fetched in parallel on a thread pool behind a shared rate
-  limiter, with retries and exponential backoff. The daily sync went from **162 s to 47 s** (8 threads), capped by
-  the source's rate limit rather than by threads.
-- **Idempotent writes:** one batch upsert, `INSERT ... ON CONFLICT DO UPDATE ... WHERE ... IS DISTINCT FROM`, so new
-  games are inserted, stat corrections applied and unchanged rows never rewritten.
-- **Caching:** the season snapshot is computed once and cached (about **860 ms cold, 30 ms per request** after),
-  with stampede protection so concurrent cold requests compute it once. A `SyncCompletedEvent` refreshes it.
-- **Long work over HTTP:** `POST /sync/daily` returns **202** with a job id to poll; a compare-and-set keeps it to
-  one sync at a time, and the job id is the log correlation id across all worker threads.
-- **Modern Java design:** sealed interfaces and pattern-matching `switch` (`LeagueScoring`, `Recommendation`), the
-  Strategy pattern for scoring, a Chain of Responsibility for roster rules, records for the domain, and a domain
-  layer with no Spring or database in it.
-- **Name matching without ids:** Yahoo and Sleeper don't share ESPN's ids, so names are matched by a hand-written
-  normalizer (accents, initials, case) and Levenshtein distance, and weak matches are flagged.
-- **Safe to share:** security headers (CSP, frame and content-type protection), a per-visitor limit on roster checks,
-  a token on the sync endpoint, and output rendered as text so nothing from Yahoo can run as script.
-- **Tested:** 109 tests: JUnit 5 for the domain logic, Mockito for services, `@WebMvcTest` for the web layer and
-  Testcontainers for the database, including the upsert.
+| | |
+|---|---|
+| **Concurrent sync** | Game logs for ~525 players fetched in parallel behind a shared rate limiter, with retries and backoff: **162 s down to 47 s** on 8 threads |
+| **Idempotent writes** | One batch upsert (`ON CONFLICT DO UPDATE ... WHERE ... IS DISTINCT FROM`): new games in, stat corrections applied, unchanged rows never rewritten |
+| **Caching** | The season snapshot is computed once with stampede protection: **860 ms cold, 30 ms per request** after, refreshed by an event after each sync |
+| **Long jobs over HTTP** | `POST /sync/daily` returns **202** and a job to poll; a compare-and-set allows one sync at a time, and the job id tags every log line |
+| **Modern Java** | Sealed interfaces with pattern-matching `switch`, Strategy for scoring, Chain of Responsibility for roster rules, records, no Spring in the domain |
+| **Name matching** | ESPN, Yahoo and Sleeper share no ids: a hand-written normalizer and Levenshtein distance join them, and weak matches are flagged |
+| **Safe to share** | Content Security Policy and other security headers, a per-visitor limit on roster checks, a token on the sync endpoint |
+| **Tested** | 109 tests: JUnit 5, Mockito, `@WebMvcTest`, and Testcontainers against a real PostgreSQL |
 
 ## API
 
