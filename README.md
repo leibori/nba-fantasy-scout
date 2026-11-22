@@ -26,7 +26,7 @@
 
 ## What it does
 
-| | |
+| Feature | What you get |
 |---|---|
 | **Keep, watch or drop** | Bring a public Yahoo league (or type your roster) and get a verdict on every player you own, each drop paired with the free agent to pick up instead. The league's own format is read from Yahoo: points or 9-cat. |
 | **Who's heating up** | Players rising in their last 3 games against their own baseline, ranked by fantasy value, filterable by position and scoring format. |
@@ -64,7 +64,7 @@ margin set per format so that noise doesn't trigger swaps.
   <img src="docs/images/architecture.webp" alt="Architecture: every morning a sync pulls ESPN and Sleeper data into PostgreSQL; every request is served from a cached season snapshot, with Yahoo leagues read live" width="900">
 </p>
 
-| | |
+| Area | How it's built |
 |---|---|
 | **Concurrent sync** | Game logs for ~525 players fetched in parallel behind a shared rate limiter, with retries and backoff: **162 s down to 47 s** on 8 threads |
 | **Idempotent writes** | One batch upsert (`ON CONFLICT DO UPDATE ... WHERE ... IS DISTINCT FROM`): new games in, stat corrections applied, unchanged rows never rewritten |
