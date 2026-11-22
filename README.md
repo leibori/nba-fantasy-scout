@@ -61,8 +61,8 @@ margin set per format so that noise doesn't trigger swaps.
 ## Under the hood
 
 ```mermaid
-flowchart LR
-    subgraph daily["Every morning: GitHub Actions calls POST /sync/daily"]
+flowchart TD
+    subgraph daily["Every morning"]
         ESPN["ESPN<br>rosters, injuries, game logs"] --> SYNC["Sync<br>8 threads, rate limited, retries"]
         SLEEPER["Sleeper<br>adds and drops"] --> SYNC
         SYNC -->|"idempotent upsert"| DB[("PostgreSQL")]
