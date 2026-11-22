@@ -171,6 +171,20 @@
   .note { color: var(--muted); font-size: 13px; margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--line); }
   .crowd { margin-top: 12px; display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--muted); flex-wrap: wrap; }
   .crowd b { font-weight: 700; }
+  .games { background: rgba(143,153,171,.1); color: var(--muted); }
+  .games.many { background: rgba(244,122,32,.12); color: var(--ball-hi); }
+  .games.few { background: rgba(255,90,95,.08); color: #e2a0a3; }
+
+  /* the schedule tip */
+  .tip { background: var(--panel); border: 1px solid var(--line); border-left: 3px solid var(--ball); border-radius: 12px; padding: 14px 18px; margin-bottom: 14px; }
+  .tip-row { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 10px; }
+  .tip-row + .tip-row { margin-top: 10px; }
+  .tip-row > b { font: 800 19px/1 var(--display); color: var(--ball-hi); min-width: 108px; }
+  .tip-row.least > b { color: var(--muted); }
+  .team { font-size: 13px; font-weight: 700; padding: 3px 8px; border-radius: 6px; background: var(--panel-2); border: 1px solid var(--line-2); }
+  .tip-row.least .team { color: var(--muted); font-weight: 600; }
+  .tip-why { color: var(--muted); font-size: 14px; }
+  .tip-foot { color: var(--faint); font-size: 12.5px; margin-top: 12px; }
 
   /* category leaderboard */
   .board { background: var(--panel); border: 1px solid var(--line); border-radius: 14px; overflow: hidden; }
@@ -414,6 +428,7 @@
     flame: '<path d="M12 2c1 4 5 6 5 11a5 5 0 0 1-10 0c0-2 1-3.5 2-4.5 0 2 1 3 2 3 0-3-1-6 1-9.5z"/>',
     ice: '<path d="M12 2v20M4 6l16 12M20 6L4 18"/>', back: '<path d="M4 12h16M14 6l6 6-6 6"/>',
     check: '<path d="M5 12l5 5 9-10"/>', swap: '<path d="M4 12h15M13 6l6 6-6 6"/>', pause: '<path d="M9 5v14M15 5v14"/>',
+    calendar: '<rect x="4" y="5" width="16" height="15" rx="2"/><path d="M4 10h16M9 3v4M15 3v4"/>',
   };
   const FORM = {
     HOT: ['Hot', 'flame'], EARLY_HOT: ['Early hot', 'flame'], RETURNING: ['Returning', 'back'], GOOD: ['Good', 'check'],
@@ -468,12 +483,39 @@
       }));
   }
 
+  // games from tomorrow (when a pickup can first play) to Sunday; 4 is a big week, 1 or none a small one
+  function gamesChip(p) {
+    const n = p.gamesLeftThisWeek;
+    if (n === null || n === undefined) return null;
+    const text = n === 0 ? 'No games left' : n === 1 ? '1 game left' : `${n} games left`;
+    return h('span', { class: `badge games${n >= 4 ? ' many' : n <= 1 ? ' few' : ''}`,
+      title: 'This week, from tomorrow (when a pickup can first play) to Sunday' }, icon(ICONS.calendar), text);
+  }
+
+  // the schedule is the same for every visitor, so it is read once per page
+  let weekRequest = null;
+  const loadWeek = () => weekRequest ??= call('/api/v1/schedule/week').catch(() => null);
+
+  // the teams with the most games left, and the fewest: where pickups help most this week
+  function weekTip(week) {
+    if (!week || !week.teams.length) return null;
+    const most = week.teams[0].left;
+    const least = week.teams[week.teams.length - 1].left;
+    if (most === least) return null;
+    const teams = n => week.teams.filter(t => t.left === n).map(t => h('span', { class: 'team' }, t.team));
+    return h('div', { class: 'tip' },
+      h('div', { class: 'tip-row' }, h('b', null, `${most} games left`), teams(most),
+        h('span', { class: 'tip-why' }, 'Pickups from these teams play the most this week.')),
+      h('div', { class: 'tip-row least' }, h('b', null, least === 1 ? 'Only 1' : `Only ${least}`), teams(least)),
+      h('div', { class: 'tip-foot' }, 'Counted from tomorrow, when a pickup can first play, to Sunday.'));
+  }
+
   function playerCard(p, i, maxValue) {
     const share = p.value === null ? 0 : Math.max(0, Math.min(1, p.value / maxValue));
     return h('article', { class: `card f-card-${p.form}`, style: `--i:${i}` },
       h('div', { class: 'rank' }, i + 1),
       who(p, p.recent ? `${fixed(p.recent.minutes, 1)} min` : null),
-      h('div', { class: 'badges' }, formBadge(p.form), injuryBadge(p.injuryStatus),
+      h('div', { class: 'badges' }, formBadge(p.form), injuryBadge(p.injuryStatus), gamesChip(p),
         p.provisional ? h('span', { class: 'badge f-NEUTRAL', title: 'Few games this season: compared with last season' }, 'vs last season') : null),
       h('div', { class: 'numbers' },
         h('div', null, h('div', { class: 'big' }, fixed(p.value)), h('div', { class: 'label' }, 'Value'),
@@ -538,7 +580,14 @@
     if (teamOut.childElementCount) return; // results (or their loading state) are already there
     const seeAll = h('button', { type: 'button', class: 'link' }, 'See all');
     seeAll.addEventListener('click', () => show('hot'));
+    teamOut.dataset.view = 'preview';
     teamOut.replaceChildren(h('h2', null, 'Heating up today', h('small', null, 'rising in their last 3 games'), seeAll), cards(players));
+    loadWeek().then(week => {
+      const tip = weekTip(week);
+      if (tip && teamOut.dataset.view === 'preview') {
+        teamOut.append(h('h2', null, 'Schedule edge this week', h('small', null, 'more games, more stats')), tip);
+      }
+    });
   }
 
   // heating up
@@ -599,7 +648,7 @@
     const p = a.player;
     return h('div', { class: 'advice', style: `--i:${i}` },
       h('div', { class: `verdict ${a.advice}` }, a.advice),
-      h('div', null, who(p, [formBadge(p.form), injuryBadge(p.injuryStatus)]),
+      h('div', null, who(p, [formBadge(p.form), injuryBadge(p.injuryStatus), gamesChip(p)]),
         h('div', { class: 'reason' }, a.reason.startsWith('Form:') ? null : a.reason,
           a.unsure ? `You typed "${a.name}", check this is him.` : null)),
       h('div', { class: 'val' }, h('div', { class: 'big' }, fixed(p.value)), h('div', { class: 'label' }, 'Value')));
@@ -607,9 +656,10 @@
   function swapCard(a) {
     const gain = a.replacement.value - a.player.value;
     return h('div', { class: 'swap' },
-      h('div', { class: 'side' }, h('div', { class: 'label down' }, 'Drop'), who(a.player, fixed(a.player.value))),
+      h('div', { class: 'side' }, h('div', { class: 'label down' }, 'Drop'), who(a.player, [fixed(a.player.value), gamesChip(a.player)])),
       h('div', { class: 'arrow' }, icon(ICONS.swap), h('b', null, signed(gain))),
-      h('div', { class: 'side' }, h('div', { class: 'label up' }, 'Add'), who(a.replacement, [fixed(a.replacement.value), formBadge(a.replacement.form)])));
+      h('div', { class: 'side' }, h('div', { class: 'label up' }, 'Add'),
+        who(a.replacement, [fixed(a.replacement.value), formBadge(a.replacement.form), gamesChip(a.replacement)])));
   }
 
   teamForm.addEventListener('submit', async event => {
@@ -620,6 +670,7 @@
     remember(data);
     const button = teamForm.querySelector('.cta');
     button.disabled = true;
+    teamOut.dataset.view = 'results';
     teamOut.replaceChildren(skeletons(3));
     teamOut.scrollIntoView({ behavior: 'smooth', block: 'start' });
     try {
@@ -643,6 +694,13 @@
       if (by('KEEP').length) {
         out.push(h('h2', null, 'Keep rolling'));
         by('KEEP').forEach((a, i) => out.push(adviceRow(a, i)));
+      }
+      const week = await loadWeek();
+      if (advice.streams.length || week) {
+        out.push(h('h2', null, 'Stream this week', h('small', null, 'value times games left, from tomorrow to Sunday')));
+        const tip = weekTip(week);
+        if (tip) out.push(tip);
+        out.push(advice.streams.length ? cards(advice.streams) : h('div', { class: 'empty' }, 'No free agent is worth streaming this week.'));
       }
       out.push(h('h2', null, 'Waiver wire steals', h('small', null, 'heating up first, then value')));
       out.push(advice.pickUpNow.length ? cards(advice.pickUpNow) : h('div', { class: 'empty' }, 'No free agent stands out right now.'));
