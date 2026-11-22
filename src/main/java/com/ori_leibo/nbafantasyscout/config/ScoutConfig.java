@@ -3,6 +3,7 @@ package com.ori_leibo.nbafantasyscout.config;
 import com.ori_leibo.nbafantasyscout.client.EspnGameLogMapper;
 import com.ori_leibo.nbafantasyscout.client.EspnNbaDataClient;
 import com.ori_leibo.nbafantasyscout.client.EspnRosterMapper;
+import com.ori_leibo.nbafantasyscout.client.EspnScoreboardMapper;
 import com.ori_leibo.nbafantasyscout.client.HttpFetcher;
 import com.ori_leibo.nbafantasyscout.client.NbaDataClient;
 import com.ori_leibo.nbafantasyscout.client.SleeperClient;
@@ -18,6 +19,7 @@ import com.ori_leibo.nbafantasyscout.recommend.RecommendationService;
 import com.ori_leibo.nbafantasyscout.recommend.SeasonData;
 import com.ori_leibo.nbafantasyscout.recommend.TrendCacheRefresher;
 import com.ori_leibo.nbafantasyscout.recommend.TrendService;
+import com.ori_leibo.nbafantasyscout.recommend.WeekSchedule;
 import com.ori_leibo.nbafantasyscout.roster.PlayerMatcher;
 import com.ori_leibo.nbafantasyscout.roster.RosterRules;
 import com.ori_leibo.nbafantasyscout.roster.RosterService;
@@ -85,7 +87,12 @@ public class ScoutConfig {
         ScoutProperties.Espn espn = properties.espn();
         HttpFetcher http = httpFetcher(httpClient, "ESPN", espn.timeout(), espn.maxCallsPerSecond(), properties.http());
         return new EspnNbaDataClient(http, espn.teamsBaseUrl(), espn.gameLogBaseUrl(),
-                new EspnRosterMapper(), new EspnGameLogMapper());
+                new EspnRosterMapper(), new EspnGameLogMapper(), new EspnScoreboardMapper());
+    }
+
+    @Bean
+    WeekSchedule weekSchedule(NbaDataClient nbaDataClient, Clock clock) {
+        return new WeekSchedule(nbaDataClient, clock);
     }
 
     @Bean
@@ -213,10 +220,12 @@ public class ScoutConfig {
     }
 
     @Bean
-    TrendService trendService(SeasonData seasonData, FormClassifier formClassifier, ScoutProperties properties) {
+    TrendService trendService(SeasonData seasonData, FormClassifier formClassifier, WeekSchedule weekSchedule,
+                              ScoutProperties properties) {
         ScoutProperties.Scoring.PerFormat highValue = properties.scoring().highValue();
         return new TrendService(seasonData, formClassifier, properties.trend().percentageWeight(),
-                highValue.categories(), highValue.points(), properties.trend().inactiveAfterMissedGames());
+                highValue.categories(), highValue.points(), properties.trend().inactiveAfterMissedGames(),
+                weekSchedule::thisWeek);
     }
 
     @Bean
@@ -229,7 +238,7 @@ public class ScoutConfig {
     RosterService rosterService(TrendService trendService, PlayerMatcher playerMatcher, ScoutProperties properties) {
         ScoutProperties.Scoring.PerFormat dropGap = properties.scoring().dropGap();
         return new RosterService(trendService, playerMatcher, new RosterRules(RosterRules.DEFAULT_ORDER),
-                dropGap.categories(), dropGap.points(), properties.roster().pickUpNow());
+                dropGap.categories(), dropGap.points(), properties.roster().pickUpNow(), properties.roster().streams());
     }
 
     @Bean

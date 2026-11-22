@@ -27,6 +27,7 @@ import java.time.LocalDate;
 import java.time.ZoneOffset;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import org.junit.jupiter.api.Test;
@@ -160,7 +161,7 @@ class TrendServiceTest {
     private TrendService service() {
         SeasonData seasonData = new SeasonData(players, gameLogs, snapshots, new TrendCalculator(3, 5, 15),
                 new HotStreakScoring(0.4, 0.3, 0.3), CLOCK, 15);
-        return new TrendService(seasonData, new FormClassifier(0.15, 18, 0.15), 0.5, 1, 1.5, 3);
+        return new TrendService(seasonData, new FormClassifier(0.15, 18, 0.15), 0.5, 1, 1.5, 3, Optional::empty);
     }
 
     private static TrendingSnapshotEntity snapshot(long playerId, TrendingSnapshot.Type type, int count, String at) {

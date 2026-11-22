@@ -63,7 +63,7 @@ class RosterControllerTest {
         when(rosterService.advise(List.of("zach edey"), List.of(), Map.of(), false, POINTS)).thenReturn(new RosterAdvice(
                 List.of(new PlayerAdvice("zach edey", EDEY, false,
                         new Recommendation.Drop(WAIVER_GUARD, "Waiver Guard is worth 1.10 more"))),
-                List.of(WAIVER_GUARD), List.of()));
+                List.of(WAIVER_GUARD), List.of(), List.of()));
 
         // no freeAgents field: optional, sent to the service as an empty list
         mvc.perform(post("/api/v1/roster").contentType(MediaType.APPLICATION_JSON).content("""
@@ -87,7 +87,7 @@ class RosterControllerTest {
         when(rosterService.advise(List.of("Zach Edey"), List.of("Waiver Guard"), Map.of("Zach Edey", Set.of("C")), true,
                 new LeagueScoring.Categories()))
                 .thenReturn(new RosterAdvice(List.of(new PlayerAdvice("Zach Edey", EDEY, false,
-                        new Recommendation.Keep("Form: GOOD"))), List.of(), List.of()));
+                        new Recommendation.Keep("Form: GOOD"))), List.of(), List.of(), List.of()));
 
         mvc.perform(post("/api/v1/roster/from-yahoo").contentType(MediaType.APPLICATION_JSON).content("""
                         {"leagueId": 246889, "teamName": "My Team", "samePosition": true}"""))

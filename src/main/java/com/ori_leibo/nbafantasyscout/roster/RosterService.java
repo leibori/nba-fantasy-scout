@@ -29,24 +29,30 @@ public class RosterService {
     private final double categoriesDropGap;
     private final double pointsDropGap;
     private final int pickUpNowSize;
+    private final int streamsSize;
 
     /** The drop gaps are per format: the formats score on different scales. */
     public RosterService(TrendService trends, PlayerMatcher matcher, RosterRules rules, double categoriesDropGap,
-                         double pointsDropGap, int pickUpNowSize) {
+                         double pointsDropGap, int pickUpNowSize, int streamsSize) {
         this.trends = trends;
         this.matcher = matcher;
         this.rules = rules;
         this.categoriesDropGap = categoriesDropGap;
         this.pointsDropGap = pointsDropGap;
         this.pickUpNowSize = pickUpNowSize;
+        this.streamsSize = streamsSize;
     }
 
     /** {@code name} as the user typed it; {@code unsure}: the match was weak, so it may be the wrong player. */
     public record PlayerAdvice(String name, PlayerForm form, boolean unsure, Recommendation recommendation) {
     }
 
-    /** {@code unmatched}: names that matched no player, and free agents whose match was too weak to suggest. */
-    public record RosterAdvice(List<PlayerAdvice> roster, List<PlayerForm> pickUpNow, List<String> unmatched) {
+    /**
+     * {@code streams}: free agents worth the most this week (value x games left); {@code unmatched}: names that
+     * matched no player, and free agents whose match was too weak to suggest.
+     */
+    public record RosterAdvice(List<PlayerAdvice> roster, List<PlayerForm> pickUpNow, List<PlayerForm> streams,
+                               List<String> unmatched) {
     }
 
     /**
@@ -91,7 +97,8 @@ public class RosterService {
                     return new PlayerAdvice(name, formById.get(match.player().id()), match.unsure(), recommendations.get(name));
                 })
                 .toList();
-        return new RosterAdvice(roster, pickUpNow(new FreeAgents(freeAgentForms, dropGap)), List.copyOf(unmatched));
+        FreeAgents freeAgents = new FreeAgents(freeAgentForms, dropGap);
+        return new RosterAdvice(roster, pickUpNow(freeAgents), streams(freeAgents), List.copyOf(unmatched));
     }
 
     // weakest first, so the weakest player gets the best free agent; a suggested free agent leaves the pool,
@@ -137,6 +144,16 @@ public class RosterService {
 
     private static Set<String> espnPosition(Player player) {
         return player.position() == null ? Set.of() : Set.of(player.position());
+    }
+
+    // this week only: a good free agent with more games left adds more; below-average players are no stream at
+    // any number of games, and without a schedule there is no week to rank
+    private List<PlayerForm> streams(FreeAgents freeAgents) {
+        return freeAgents.available().stream()
+                .filter(form -> form.value() > 0 && form.gamesLeftThisWeek() != null && form.gamesLeftThisWeek() > 0)
+                .sorted(Comparator.comparingDouble((PlayerForm form) -> form.value() * form.gamesLeftThisWeek()).reversed())
+                .limit(streamsSize)
+                .toList();
     }
 
     // rising free agents first (the reason to act now), then the best value

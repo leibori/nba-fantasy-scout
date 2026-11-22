@@ -8,12 +8,13 @@ import java.util.List;
  * league stats the values leave out.
  */
 public record RosterResponse(List<PlayerAdviceResponse> roster, List<PlayerFormResponse> pickUpNow,
-                             List<String> unmatched, List<String> warnings) {
+                             List<PlayerFormResponse> streams, List<String> unmatched, List<String> warnings) {
 
     public static RosterResponse from(RosterAdvice advice, List<String> warnings) {
         return new RosterResponse(
                 advice.roster().stream().map(PlayerAdviceResponse::from).toList(),
                 advice.pickUpNow().stream().map(PlayerFormResponse::from).toList(),
+                advice.streams().stream().map(PlayerFormResponse::from).toList(),
                 advice.unmatched(),
                 warnings);
     }

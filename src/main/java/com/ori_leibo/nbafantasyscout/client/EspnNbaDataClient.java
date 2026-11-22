@@ -2,6 +2,9 @@ package com.ori_leibo.nbafantasyscout.client;
 
 import com.ori_leibo.nbafantasyscout.domain.GameLog;
 import com.ori_leibo.nbafantasyscout.domain.Player;
+import com.ori_leibo.nbafantasyscout.domain.ScheduledGame;
+import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
 import org.slf4j.Logger;
@@ -20,14 +23,23 @@ public class EspnNbaDataClient implements NbaDataClient {
     private final String gameLogBaseUrl;
     private final EspnRosterMapper rosterMapper;
     private final EspnGameLogMapper gameLogMapper;
+    private final EspnScoreboardMapper scoreboardMapper;
 
     public EspnNbaDataClient(HttpFetcher http, String teamsBaseUrl, String gameLogBaseUrl,
-                             EspnRosterMapper rosterMapper, EspnGameLogMapper gameLogMapper) {
+                             EspnRosterMapper rosterMapper, EspnGameLogMapper gameLogMapper,
+                             EspnScoreboardMapper scoreboardMapper) {
         this.http = http;
         this.teamsBaseUrl = teamsBaseUrl;
         this.gameLogBaseUrl = gameLogBaseUrl;
         this.rosterMapper = rosterMapper;
         this.gameLogMapper = gameLogMapper;
+        this.scoreboardMapper = scoreboardMapper;
+    }
+
+    @Override
+    public List<ScheduledGame> fetchSchedule(LocalDate date) {
+        return scoreboardMapper.games(http.get("%s/scoreboard?dates=%s".formatted(teamsBaseUrl,
+                date.format(DateTimeFormatter.BASIC_ISO_DATE))));
     }
 
     @Override

@@ -12,7 +12,7 @@ public record PlayerFormResponse(long id, String name, String team, String posit
                                  String form, int gamesThisSeason, Double value, Double hotScore,
                                  String baselineSource, boolean provisional,
                                  StatLineResponse recent, StatLineResponse baseline, CrowdResponse crowd,
-                                 LocalDate lastGame, int teamGamesMissed) {
+                                 LocalDate lastGame, int teamGamesMissed, Integer gamesLeftThisWeek) {
 
     public static PlayerFormResponse from(PlayerForm form) {
         Player player = form.player();
@@ -26,6 +26,6 @@ public record PlayerFormResponse(long id, String name, String team, String posit
                 hasTrend ? StatLineResponse.from(form.trend().recent()) : null,
                 hasTrend ? StatLineResponse.from(form.trend().baseline()) : null,
                 CrowdResponse.from(form.crowdSignal(), form.crowd()),
-                form.lastGame(), form.teamGamesMissed());
+                form.lastGame(), form.teamGamesMissed(), form.gamesLeftThisWeek());
     }
 }

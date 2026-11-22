@@ -1,0 +1,110 @@
+{
+ "day": null,
+ "events": [
+  {
+   "id": "401910029",
+   "date": "2026-11-22T20:30Z",
+   "name": "Detroit Pistons at Atlanta Hawks",
+   "season": {
+    "year": 2027,
+    "type": 2
+   },
+   "status": {
+    "type": {
+     "name": "STATUS_IN_PROGRESS",
+     "state": "in"
+    }
+   },
+   "competitions": [
+    {
+     "competitors": [
+      {
+       "homeAway": "home",
+       "team": {
+        "id": "1",
+        "abbreviation": "ATL"
+       }
+      },
+      {
+       "homeAway": "away",
+       "team": {
+        "id": "8",
+        "abbreviation": "DET"
+       }
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "401910030",
+   "date": "2026-11-22T23:00Z",
+   "name": "Oklahoma City Thunder at Miami Heat",
+   "season": {
+    "year": 2027,
+    "type": 2
+   },
+   "status": {
+    "type": {
+     "name": "STATUS_SCHEDULED",
+     "state": "pre"
+    }
+   },
+   "competitions": [
+    {
+     "competitors": [
+      {
+       "homeAway": "home",
+       "team": {
+        "id": "14",
+        "abbreviation": "MIA"
+       }
+      },
+      {
+       "homeAway": "away",
+       "team": {
+        "id": "25",
+        "abbreviation": "OKC"
+       }
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "401910031",
+   "date": "2026-11-23T00:00Z",
+   "name": "Orlando Magic at Washington Wizards",
+   "season": {
+    "year": 2027,
+    "type": 2
+   },
+   "status": {
+    "type": {
+     "name": "STATUS_SCHEDULED",
+     "state": "pre"
+    }
+   },
+   "competitions": [
+    {
+     "competitors": [
+      {
+       "homeAway": "home",
+       "team": {
+        "id": "27",
+        "abbreviation": "WSH"
+       }
+      },
+      {
+       "homeAway": "away",
+       "team": {
+        "id": "19",
+        "abbreviation": "ORL"
+       }
+      }
+     ]
+    }
+   ]
+  }
+ ]
+}

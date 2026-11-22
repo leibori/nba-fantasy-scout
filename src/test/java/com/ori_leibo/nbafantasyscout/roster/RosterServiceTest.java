@@ -4,6 +4,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.when;
 
 import com.ori_leibo.nbafantasyscout.domain.LeagueScoring;
@@ -15,6 +16,7 @@ import com.ori_leibo.nbafantasyscout.recommend.TrendService.PlayerForm;
 import com.ori_leibo.nbafantasyscout.roster.RosterService.PlayerAdvice;
 import com.ori_leibo.nbafantasyscout.roster.RosterService.RosterAdvice;
 import com.ori_leibo.nbafantasyscout.trend.FormClassifier.Form;
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -51,8 +53,9 @@ class RosterServiceTest {
     void setUp() {
         // drop gap 1.5 in 9-cat, 0.5 in points; suggest 3 pickups
         service = new RosterService(trends, new PlayerMatcher(0.85), new RosterRules(RosterRules.DEFAULT_ORDER),
-                1.5, 0.5, 3);
-        when(trends.formOfAllPlayers(POINTS)).thenReturn(
+                1.5, 0.5, 3, 3);
+        // lenient: the streams test asks for another format
+        lenient().when(trends.formOfAllPlayers(POINTS)).thenReturn(
                 List.of(FLAGG, REED, EDEY, WAIVER_GUARD, SECOND_OPTION, HOT_ROOKIE, INJURED_BIG));
     }
 
@@ -88,6 +91,25 @@ class RosterServiceTest {
         // a blank name matches nobody; a weak free agent match is never suggested
         assertEquals(List.of(" ", "Nobody At All"), advice.unmatched());
         assertEquals(List.of(HOT_ROOKIE), advice.pickUpNow());
+    }
+
+    @Test
+    void streamsRankFreeAgentsByValueTimesGamesLeftThisWeek() {
+        LeagueScoring categories = new LeagueScoring.Categories();
+        PlayerForm fourGames = thisWeek(11, "Four Games", 0.5, 4);          // 2.0
+        PlayerForm twoGames = thisWeek(12, "Two Games", 0.9, 2);            // 1.8, better per game but fewer games
+        PlayerForm doneForTheWeek = thisWeek(13, "Done For The Week", 2.0, 0);
+        PlayerForm belowAverage = thisWeek(14, "Below Average", -0.3, 4);   // no stream at any number of games
+        when(trends.formOfAllPlayers(categories)).thenReturn(List.of(FLAGG, fourGames, twoGames, doneForTheWeek, belowAverage));
+
+        RosterAdvice advice = service.advise(List.of("Cooper Flagg"), List.of(), Map.of(), false, categories);
+
+        assertEquals(List.of(fourGames, twoGames), advice.streams());
+    }
+
+    private static PlayerForm thisWeek(long id, String name, double value, int gamesLeft) {
+        return new PlayerForm(new Player(id, name, "BOS", "F", null, 3), 10, null, null, value, Form.NEUTRAL, null,
+                CrowdSignal.NONE, LocalDate.of(2026, 11, 22), 0, gamesLeft);
     }
 
     @Test

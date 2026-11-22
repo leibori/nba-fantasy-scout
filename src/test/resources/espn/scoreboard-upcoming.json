@@ -1,0 +1,355 @@
+{
+ "day": null,
+ "events": [
+  {
+   "id": "401910036",
+   "date": "2026-11-24T00:00Z",
+   "name": "Memphis Grizzlies at Charlotte Hornets",
+   "season": {
+    "year": 2027,
+    "type": 2
+   },
+   "status": {
+    "type": {
+     "name": "STATUS_SCHEDULED",
+     "state": "pre"
+    }
+   },
+   "competitions": [
+    {
+     "competitors": [
+      {
+       "homeAway": "home",
+       "team": {
+        "id": "30",
+        "abbreviation": "CHA"
+       }
+      },
+      {
+       "homeAway": "away",
+       "team": {
+        "id": "29",
+        "abbreviation": "MEM"
+       }
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "401910037",
+   "date": "2026-11-24T00:00Z",
+   "name": "Portland Trail Blazers at Philadelphia 76ers",
+   "season": {
+    "year": 2027,
+    "type": 2
+   },
+   "status": {
+    "type": {
+     "name": "STATUS_SCHEDULED",
+     "state": "pre"
+    }
+   },
+   "competitions": [
+    {
+     "competitors": [
+      {
+       "homeAway": "home",
+       "team": {
+        "id": "20",
+        "abbreviation": "PHI"
+       }
+      },
+      {
+       "homeAway": "away",
+       "team": {
+        "id": "22",
+        "abbreviation": "POR"
+       }
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "401910038",
+   "date": "2026-11-24T00:30Z",
+   "name": "Oklahoma City Thunder at Indiana Pacers",
+   "season": {
+    "year": 2027,
+    "type": 2
+   },
+   "status": {
+    "type": {
+     "name": "STATUS_SCHEDULED",
+     "state": "pre"
+    }
+   },
+   "competitions": [
+    {
+     "competitors": [
+      {
+       "homeAway": "home",
+       "team": {
+        "id": "11",
+        "abbreviation": "IND"
+       }
+      },
+      {
+       "homeAway": "away",
+       "team": {
+        "id": "25",
+        "abbreviation": "OKC"
+       }
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "401910039",
+   "date": "2026-11-24T00:30Z",
+   "name": "Milwaukee Bucks at Toronto Raptors",
+   "season": {
+    "year": 2027,
+    "type": 2
+   },
+   "status": {
+    "type": {
+     "name": "STATUS_SCHEDULED",
+     "state": "pre"
+    }
+   },
+   "competitions": [
+    {
+     "competitors": [
+      {
+       "homeAway": "home",
+       "team": {
+        "id": "28",
+        "abbreviation": "TOR"
+       }
+      },
+      {
+       "homeAway": "away",
+       "team": {
+        "id": "15",
+        "abbreviation": "MIL"
+       }
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "401910040",
+   "date": "2026-11-24T00:30Z",
+   "name": "Brooklyn Nets at Minnesota Timberwolves",
+   "season": {
+    "year": 2027,
+    "type": 2
+   },
+   "status": {
+    "type": {
+     "name": "STATUS_SCHEDULED",
+     "state": "pre"
+    }
+   },
+   "competitions": [
+    {
+     "competitors": [
+      {
+       "homeAway": "home",
+       "team": {
+        "id": "16",
+        "abbreviation": "MIN"
+       }
+      },
+      {
+       "homeAway": "away",
+       "team": {
+        "id": "17",
+        "abbreviation": "BKN"
+       }
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "401910041",
+   "date": "2026-11-24T01:00Z",
+   "name": "Cleveland Cavaliers at Chicago Bulls",
+   "season": {
+    "year": 2027,
+    "type": 2
+   },
+   "status": {
+    "type": {
+     "name": "STATUS_SCHEDULED",
+     "state": "pre"
+    }
+   },
+   "competitions": [
+    {
+     "competitors": [
+      {
+       "homeAway": "home",
+       "team": {
+        "id": "4",
+        "abbreviation": "CHI"
+       }
+      },
+      {
+       "homeAway": "away",
+       "team": {
+        "id": "5",
+        "abbreviation": "CLE"
+       }
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "401910042",
+   "date": "2026-11-24T01:00Z",
+   "name": "Phoenix Suns at New Orleans Pelicans",
+   "season": {
+    "year": 2027,
+    "type": 2
+   },
+   "status": {
+    "type": {
+     "name": "STATUS_SCHEDULED",
+     "state": "pre"
+    }
+   },
+   "competitions": [
+    {
+     "competitors": [
+      {
+       "homeAway": "home",
+       "team": {
+        "id": "3",
+        "abbreviation": "NO"
+       }
+      },
+      {
+       "homeAway": "away",
+       "team": {
+        "id": "21",
+        "abbreviation": "PHX"
+       }
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "401910043",
+   "date": "2026-11-24T01:30Z",
+   "name": "LA Clippers at Houston Rockets",
+   "season": {
+    "year": 2027,
+    "type": 2
+   },
+   "status": {
+    "type": {
+     "name": "STATUS_SCHEDULED",
+     "state": "pre"
+    }
+   },
+   "competitions": [
+    {
+     "competitors": [
+      {
+       "homeAway": "home",
+       "team": {
+        "id": "10",
+        "abbreviation": "HOU"
+       }
+      },
+      {
+       "homeAway": "away",
+       "team": {
+        "id": "12",
+        "abbreviation": "LAC"
+       }
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "401910044",
+   "date": "2026-11-24T03:00Z",
+   "name": "Utah Jazz at Los Angeles Lakers",
+   "season": {
+    "year": 2027,
+    "type": 2
+   },
+   "status": {
+    "type": {
+     "name": "STATUS_SCHEDULED",
+     "state": "pre"
+    }
+   },
+   "competitions": [
+    {
+     "competitors": [
+      {
+       "homeAway": "home",
+       "team": {
+        "id": "13",
+        "abbreviation": "LAL"
+       }
+      },
+      {
+       "homeAway": "away",
+       "team": {
+        "id": "26",
+        "abbreviation": "UTAH"
+       }
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "401910045",
+   "date": "2026-11-24T03:00Z",
+   "name": "San Antonio Spurs at Sacramento Kings",
+   "season": {
+    "year": 2027,
+    "type": 2
+   },
+   "status": {
+    "type": {
+     "name": "STATUS_SCHEDULED",
+     "state": "pre"
+    }
+   },
+   "competitions": [
+    {
+     "competitors": [
+      {
+       "homeAway": "home",
+       "team": {
+        "id": "23",
+        "abbreviation": "SAC"
+       }
+      },
+      {
+       "homeAway": "away",
+       "team": {
+        "id": "24",
+        "abbreviation": "SA"
+       }
+      }
+     ]
+    }
+   ]
+  }
+ ]
+}
