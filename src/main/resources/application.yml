@@ -8,6 +8,9 @@ spring:
     url: jdbc:postgresql://localhost:5432/scout
     username: scout
     password: scout
+    hikari:
+      minimum-idle: 0          # close idle connections, so a scale-to-zero database (Neon) can sleep;
+      idle-timeout: 60000      # the trend cache means the database is only touched about once a day
   jpa:
     hibernate:
       ddl-auto: validate

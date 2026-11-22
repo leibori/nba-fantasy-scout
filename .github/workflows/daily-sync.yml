@@ -1,0 +1,36 @@
+name: Daily sync
+
+# The free server sleeps when idle, so its own @Scheduled sync can't be trusted to fire. This starts the sync from
+# outside instead (and the request wakes the server), then waits for the job so a failed sync fails this run.
+on:
+  schedule:
+    - cron: "30 7 * * *"   # 07:30 UTC = 09:30 Israel in winter, 10:30 in summer; after the last US games
+  workflow_dispatch:       # "Run workflow" button for a sync by hand
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Start the sync and wait for it
+        env:
+          URL: ${{ vars.SCOUT_URL }}
+          TOKEN: ${{ secrets.SCOUT_SYNC_TOKEN }}
+        run: |
+          if [ -z "$URL" ] || [ -z "$TOKEN" ]; then
+            echo "::warning::Set the SCOUT_URL variable and the SCOUT_SYNC_TOKEN secret to enable the daily sync"
+            exit 0
+          fi
+          # a sleeping server can take a few minutes to wake, so retry the start
+          job=$(curl -sSf --retry 6 --retry-delay 20 --retry-all-errors --max-time 180 \
+                -X POST -H "X-Sync-Token: $TOKEN" "$URL/api/v1/sync/daily" | jq -r .jobId)
+          echo "Started job $job"
+          for i in $(seq 1 90); do
+            body=$(curl -sSf --max-time 30 "$URL/api/v1/sync/jobs/$job")
+            status=$(echo "$body" | jq -r .status)
+            if [ "$status" = DONE ]; then echo "$body" | jq .result; exit 0; fi
+            if [ "$status" = FAILED ]; then echo "::error::Sync failed: $(echo "$body" | jq -r .error)"; exit 1; fi
+            sleep 10
+          done
+          echo "::error::Sync still running after 15 minutes"
+          exit 1
