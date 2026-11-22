@@ -221,8 +221,20 @@
   @keyframes shine { to { background-position: -150% 0; } }
   .waking { color: var(--muted); font-size: 13px; margin-bottom: 12px; }
   .hidden { display: none !important; }
-  footer { color: var(--muted); font-size: 12.5px; padding: 40px 0 30px; border-top: 1px solid var(--line); margin-top: 60px; }
-  footer a { color: var(--muted); }
+  footer { color: var(--muted); padding: 30px 0 34px; border-top: 1px solid var(--line); margin-top: 60px; }
+  .credit { display: flex; flex-wrap: wrap; gap: 16px 28px; align-items: center; justify-content: space-between; }
+  .by { display: flex; align-items: center; gap: 12px; font-size: 14px; }
+  .by img { border-radius: 8px; flex: none; }
+  .by strong { color: var(--text); font-weight: 600; white-space: nowrap; }
+  .hire { display: flex; align-items: center; gap: 14px; font-size: 14px; }
+  .connect { display: inline-flex; align-items: center; gap: 9px; padding: 8px 16px 8px 9px; border-radius: 11px; text-decoration: none;
+             color: var(--text); font-weight: 600; background: rgba(19,24,35,.8); border: 1px solid rgba(47,213,242,.4);
+             transition: transform .12s, box-shadow .12s, border-color .12s; }
+  .connect:hover { transform: translateY(-1px); border-color: var(--cyan); box-shadow: 0 0 22px rgba(47,213,242,.22); }
+  .connect .li { width: 24px; height: 24px; border-radius: 6px; background: #0a66c2; display: grid; place-items: center; }
+  .connect .li svg { width: 14px; height: 14px; }
+  .fine { margin: 20px 0 0; font-size: 12px; color: #66738a; line-height: 1.6; }
+  .fine a { color: #8794ab; }
 
   @media (prefers-reduced-motion: reduce) {
     *, *::before, *::after { animation: none !important; transition: none !important; }
@@ -346,9 +358,22 @@
   </section>
 
   <footer>
-    Values are z-scores against every NBA player averaging real minutes this season. Stats from ESPN, crowd moves
-    from Sleeper, leagues from Yahoo's public read-only API. Not affiliated with the NBA, ESPN, Sleeper or Yahoo.
-    · <a href="/swagger-ui.html">API docs</a>
+    <div class="credit">
+      <div class="by">
+        <img src="/img/favicon.png" alt="" width="30" height="30">
+        <span>© <span id="year">2026</span> Fantasy Scout · Designed &amp; built by <strong>Ori Leibovitz</strong></span>
+      </div>
+      <div class="hire">
+        <span>Like what you see?</span>
+        <a class="connect" href="https://www.linkedin.com/in/ori-leibovitz/" target="_blank" rel="noopener">
+          <span class="li"><svg viewBox="0 0 24 24" fill="#fff" aria-hidden="true"><path d="M4.98 3.5a2.5 2.5 0 1 1 0 5 2.5 2.5 0 0 1 0-5zM3 9.75h4V21H3zM9.5 9.75h3.8v1.6h.05c.53-1 1.83-2.05 3.77-2.05 4.03 0 4.78 2.65 4.78 6.1V21h-4v-4.95c0-1.18-.02-2.7-1.65-2.7-1.65 0-1.9 1.29-1.9 2.62V21h-4z"/></svg></span>
+          Let's connect
+        </a>
+      </div>
+    </div>
+    <p class="fine">Values are z-scores against every NBA player averaging real minutes this season. Stats from ESPN,
+      crowd moves from Sleeper, leagues from Yahoo's public read-only API. Not affiliated with the NBA, ESPN, Sleeper
+      or Yahoo. · <a href="/swagger-ui.html">API docs</a></p>
   </footer>
 </main>
 
@@ -640,6 +665,7 @@
     window.scrollTo({ top: 0 });
   }
   document.querySelectorAll('.tabs button').forEach(t => t.addEventListener('click', () => show(t.dataset.tab)));
+  document.getElementById('year').textContent = new Date().getFullYear();
   show('team');
   loadTicker();
 </script>
