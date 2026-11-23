@@ -11,7 +11,7 @@
   <a href="https://nba-fantasy-scout-1.onrender.com"><img alt="Live site" src="https://img.shields.io/badge/live%20site-open-f47a20?style=for-the-badge"></a>
   <img alt="Java 21" src="https://img.shields.io/badge/Java-21-2fd5f2?style=for-the-badge">
   <img alt="Spring Boot 4" src="https://img.shields.io/badge/Spring%20Boot-4-3ddc84?style=for-the-badge">
-  <img alt="Tests" src="https://img.shields.io/badge/tests-109-3ddc84?style=for-the-badge">
+  <a href="https://github.com/leibori/nba-fantasy-scout/actions/workflows/tests.yml"><img alt="Tests" src="https://img.shields.io/github/actions/workflow/status/leibori/nba-fantasy-scout/tests.yml?branch=main&label=tests&style=for-the-badge"></a>
   <a href="https://github.com/leibori/nba-fantasy-scout/actions/workflows/daily-sync.yml"><img alt="Daily sync" src="https://github.com/leibori/nba-fantasy-scout/actions/workflows/daily-sync.yml/badge.svg"></a>
 </p>
 

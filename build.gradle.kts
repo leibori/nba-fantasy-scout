@@ -43,3 +43,16 @@ dependencies {
 tasks.withType<Test> {
     useJUnitPlatform()
 }
+
+// tests that call the real ESPN, Sleeper and Yahoo stay out of the normal build
+tasks.test {
+    useJUnitPlatform { excludeTags("live") }
+}
+
+tasks.register<Test>("liveTest") {
+    description = "Calls the real data sources and checks their JSON still maps."
+    group = "verification"
+    testClassesDirs = sourceSets.test.get().output.classesDirs
+    classpath = sourceSets.test.get().runtimeClasspath
+    useJUnitPlatform { includeTags("live") }
+}
