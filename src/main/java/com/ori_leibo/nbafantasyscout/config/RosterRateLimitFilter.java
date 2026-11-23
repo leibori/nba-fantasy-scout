@@ -11,7 +11,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 /**
- * Limits roster checks per visitor. A Yahoo league check makes ~9 Yahoo calls through one shared rate limiter, so
+ * Limits roster checks (and league team lists, which also call Yahoo) per visitor. A Yahoo league check makes ~9 Yahoo calls through one shared rate limiter, so
  * without this a single client sending many requests would make everyone else wait (or get the server blocked).
  */
 public class RosterRateLimitFilter extends OncePerRequestFilter {
@@ -28,7 +28,10 @@ public class RosterRateLimitFilter extends OncePerRequestFilter {
 
     @Override
     protected boolean shouldNotFilter(HttpServletRequest request) {
-        return !("POST".equals(request.getMethod()) && request.getRequestURI().startsWith("/api/v1/roster"));
+        String uri = request.getRequestURI();
+        // both go to Yahoo: a roster check (POST) and a league's team list (GET)
+        return !(("POST".equals(request.getMethod()) && uri.startsWith("/api/v1/roster"))
+                || ("GET".equals(request.getMethod()) && uri.startsWith("/api/v1/leagues/")));
     }
 
     @Override
@@ -47,7 +50,7 @@ public class RosterRateLimitFilter extends OncePerRequestFilter {
         response.setCharacterEncoding("UTF-8");
         // same shape as the other errors, so the page shows the detail like any other message
         response.getWriter().write("""
-                {"status":429,"title":"Too Many Requests","detail":"Up to %d roster checks a minute. Try again in %d seconds."}"""
+                {"status":429,"title":"Too Many Requests","detail":"Up to %d league or roster checks a minute. Try again in %d seconds."}"""
                 .formatted(perMinute, decision.retryAfterSeconds()));
     }
 

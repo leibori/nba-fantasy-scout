@@ -35,8 +35,13 @@ public class YahooMapper {
     public record League(String name, int season, LeagueScoring scoring, List<String> warnings) {
     }
 
-    public record Team(String key, String name) {
+    /** {@code logoUrl}: the team's picture on Yahoo's image hosts, or null (the page then shows initials). */
+    public record Team(String key, String name, String logoUrl) {
     }
+
+    // the page may load images only from these (its Content-Security-Policy); other URLs are dropped
+    private static final List<String> LOGO_HOSTS = List.of(
+            "https://s.yimg.com/", "https://yahoofantasysports-res.cloudinary.com/");
 
     /** {@code positions}: the fantasy positions he can fill, e.g. PG and SG. */
     public record NamedPlayer(String name, Set<String> positions) {
@@ -96,7 +101,9 @@ public class YahooMapper {
         List<Team> result = new ArrayList<>();
         for (JsonNode team : list(teams, "team")) {
             JsonNode parts = team.path(0);
-            result.add(new Team(part(parts, "team_key").asString(""), part(parts, "name").asString("")));
+            String logo = part(parts, "team_logos").path(0).path("team_logo").path("url").asString("");
+            result.add(new Team(part(parts, "team_key").asString(""), part(parts, "name").asString(""),
+                    LOGO_HOSTS.stream().anyMatch(logo::startsWith) ? logo : null));
         }
         return result;
     }

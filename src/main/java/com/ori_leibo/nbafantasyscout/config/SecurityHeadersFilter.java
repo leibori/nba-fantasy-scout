@@ -15,7 +15,8 @@ public class SecurityHeadersFilter extends OncePerRequestFilter {
             "default-src 'self'",
             "script-src 'self' 'unsafe-inline'",
             "style-src 'self' 'unsafe-inline'",
-            "img-src 'self' data:",
+            // Yahoo team logos in the league team picker
+            "img-src 'self' data: https://s.yimg.com https://yahoofantasysports-res.cloudinary.com",
             "font-src 'self'",
             "connect-src 'self'",
             "object-src 'none'",

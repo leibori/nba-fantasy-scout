@@ -34,7 +34,10 @@ class YahooMapperTest {
     void readsTeamsRosterAndFreeAgentsWithTheirPositions() {
         List<YahooMapper.Team> teams = mapper.teams(fixture("teams.json"));
         assertEquals(10, teams.size());
-        assertTrue(teams.contains(new YahooMapper.Team("478.l.246889.t.2", "Givaat Shmuel Rabbis")));
+        assertTrue(teams.contains(new YahooMapper.Team("478.l.246889.t.2", "Givaat Shmuel Rabbis",
+                "https://yahoofantasysports-res.cloudinary.com/image/upload/t_s192sq/fantasy-logos/"
+                        + "1ce8b73edc982c63f4afb5cb149be5a20c63e6af54044a1f06febb1301e8b550.jpg")));
+        assertEquals("https://s.yimg.com/ep/cx/blendr/v2/image-witch-png_1721174369206.png", teams.get(2).logoUrl());
 
         List<YahooMapper.NamedPlayer> roster = mapper.players(fixture("roster.json"));
         assertEquals(13, roster.size());

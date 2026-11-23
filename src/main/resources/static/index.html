@@ -88,6 +88,21 @@
   .seg.modes button[aria-pressed="true"] { color: var(--text); border-bottom-color: var(--ball); background: none; box-shadow: none; }
   .panel-body { padding: 22px 22px 6px; }
   .fields { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
+  .fields.yahoo { grid-template-columns: 1fr; gap: 14px; }
+  .fields.yahoo input[name=leagueId] { max-width: 240px; }
+  fieldset.field { border: 0; margin: 0; padding: 0; }
+  fieldset.field legend { padding: 0; margin-bottom: 7px; }
+  .fields.yahoo:has(.team-opt) .league-hint { display: none; }
+  .team-pick { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 8px; max-height: 150px; overflow-y: auto; }
+  .team-pick > :not(.team-opt) { grid-column: 1 / -1; }
+  .team-opt { position: relative; display: flex; align-items: center; gap: 10px; min-width: 0; padding: 7px 10px; cursor: pointer;
+          background: #0f131b; border: 1px solid var(--line); border-radius: 10px; font-size: 14px; font-weight: 600; transition: border-color .15s; }
+  .team-opt:hover { border-color: var(--line-2); }
+  .team-opt > span:last-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .team-opt img, .team-opt .avatar { width: 30px; height: 30px; border-radius: 50%; object-fit: cover; flex: none; font-size: 12px; }
+  .team-opt input { position: absolute; opacity: 0; pointer-events: none; }
+  .team-opt:has(input:checked) { border-color: var(--ball); background: rgba(244,122,32,.1); }
+  .team-opt:has(input:focus-visible) { outline: 2px solid var(--cyan); outline-offset: 2px; }
   .field { display: flex; flex-direction: column; gap: 7px; min-width: 0; }
   .field-label { font-size: 14px; font-weight: 600; }
   .hint { font-size: 13px; color: var(--faint); }
@@ -312,10 +327,10 @@
             <div class="fields yahoo">
               <label class="field"><span class="field-label">League ID</span>
                 <input type="text" name="leagueId" inputmode="numeric" placeholder="12345">
-                <span class="hint">From your league URL: …/nba/<b>12345</b></span></label>
-              <label class="field"><span class="field-label">Team name</span>
-                <input type="text" name="teamName" placeholder="Your team name">
-                <span class="hint">Exactly as it appears in Yahoo</span></label>
+                <span class="hint league-hint">From your league URL: …/nba/<b>12345</b></span></label>
+              <fieldset class="field"><legend class="field-label">Your team</legend>
+                <div class="team-pick"><span class="hint">Enter your league ID to see its teams</span></div>
+              </fieldset>
             </div>
             <div class="fields typed hidden">
               <label class="field"><span class="field-label">My roster</span>
@@ -631,6 +646,44 @@
     teamForm.querySelector('.fields.typed').classList.toggle('hidden', source === 'yahoo');
   }
   teamForm.querySelector('.seg').addEventListener('change', () => showSource(seg('source')));
+
+  // the league's teams as a picker: typed league id -> GET its teams (debounced, cached per id) -> radio cards
+  const leagueInput = teamForm.elements.leagueId;
+  const teamPick = teamForm.querySelector('.team-pick');
+  const teamsCache = new Map();
+  let teamsFor = null, teamTimer, chosenTeam = '';
+  const pickHint = text => h('span', { class: 'hint' }, text);
+  function teamOption(team) {
+    const initialsBadge = () => h('span', { class: 'avatar', style: `background: linear-gradient(135deg, hsl(${hue(team.name)} 72% 46%), hsl(${(hue(team.name) + 50) % 360} 70% 26%))` }, initials(team.name) || '?');
+    let logo = initialsBadge();
+    if (team.logoUrl) {
+      logo = h('img', { src: team.logoUrl, alt: '', width: 30, height: 30, referrerpolicy: 'no-referrer' });
+      logo.addEventListener('error', () => logo.replaceWith(initialsBadge()));
+    }
+    return h('label', { class: 'team-opt' },
+      h('input', { type: 'radio', name: 'teamName', value: team.name, checked: team.name === chosenTeam ? '' : null }),
+      logo, h('span', null, team.name));
+  }
+  async function loadTeams() {
+    const id = leagueInput.value.trim();
+    if (!/^\d+$/.test(id)) {
+      teamsFor = null;
+      teamPick.replaceChildren(pickHint(id ? 'A league ID is the number in your league URL' : 'Enter your league ID to see its teams'));
+      return;
+    }
+    if (id === teamsFor) return;
+    teamsFor = id;
+    teamPick.replaceChildren(pickHint('Finding the league\'s teams...'));
+    try {
+      const teams = teamsCache.get(id) || await call(`/api/v1/leagues/${id}/teams`, undefined, teamPick);
+      teamsCache.set(id, teams);
+      if (teamsFor === id) teamPick.replaceChildren(...teams.map(teamOption)); // unless a newer id was typed meanwhile
+    } catch (e) {
+      if (teamsFor === id) { teamsFor = null; teamPick.replaceChildren(errorBox(e)); }
+    }
+  }
+  leagueInput.addEventListener('input', () => { clearTimeout(teamTimer); teamTimer = setTimeout(loadTeams, 600); });
+  teamPick.addEventListener('change', event => { chosenTeam = event.target.value; });
   const lines = text => (text || '').split('\n').map(s => s.trim()).filter(Boolean);
 
   // a made-up team and a few free agents, so a visitor without a league sees real advice
@@ -667,6 +720,12 @@
     const data = new FormData(teamForm);
     const yahoo = seg('source') === 'yahoo';
     const samePosition = data.get('samePosition') === 'on';
+    if (yahoo && !data.get('teamName')) {
+      if (!teamPick.querySelector('.team-opt')) loadTeams();
+      teamPick.prepend(h('div', { class: 'alert warn' }, 'Pick your team first'));
+      leagueInput.focus();
+      return;
+    }
     remember(data);
     const button = teamForm.querySelector('.cta');
     button.disabled = true;
@@ -718,8 +777,11 @@
     try { FIELDS.forEach(f => localStorage.setItem('scout.' + f, data.get(f) || '')); } catch (e) { /* not stored */ }
   }
   try {
-    FIELDS.forEach(f => { const v = localStorage.getItem('scout.' + f); if (v) teamForm.elements[f].value = v; });
+    // the team is a radio that only exists once the league's teams load, so it is kept aside until then
+    chosenTeam = localStorage.getItem('scout.teamName') || '';
+    FIELDS.filter(f => f !== 'teamName').forEach(f => { const v = localStorage.getItem('scout.' + f); if (v) teamForm.elements[f].value = v; });
   } catch (e) { /* nothing remembered */ }
+  if (leagueInput.value) loadTeams();
 
   // tabs; each list loads the first time its tab opens
   const loaded = new Set();

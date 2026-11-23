@@ -79,6 +79,7 @@ margin set per format so that noise doesn't trigger swaps.
 
 | Endpoint | |
 |---|---|
+| `GET /api/v1/leagues/{leagueId}/teams` | The teams of a public Yahoo league with their logos, to pick yours |
 | `POST /api/v1/roster/from-yahoo` | Advice for a team in a public Yahoo league: `{ "leagueId": 12345, "teamName": "...", "samePosition": false }` |
 | `POST /api/v1/roster` | The same advice for typed names: `{ "myRoster": [...], "freeAgents": [...] }` |
 | `GET /api/v1/recommendations/hot` | Players heating up; `?position=G\|F\|C`, `?scoring=points\|categories`, `?limit=` |

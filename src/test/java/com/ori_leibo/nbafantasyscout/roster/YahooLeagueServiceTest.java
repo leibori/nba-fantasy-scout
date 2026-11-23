@@ -28,8 +28,8 @@ class YahooLeagueServiceTest {
     // a day in the 2026-27 season, which Yahoo calls 2026
     private static final Clock CLOCK = Clock.fixed(Instant.parse("2026-11-01T12:00:00Z"), ZoneOffset.UTC);
     private static final List<YahooMapper.Team> TEAMS = List.of(
-            new YahooMapper.Team("478.l.246889.t.1", "Ramat-Gan Eshet Chayil"),
-            new YahooMapper.Team("478.l.246889.t.2", "Givaat Shmuel Rabbis"));
+            new YahooMapper.Team("478.l.246889.t.1", "Ramat-Gan Eshet Chayil", null),
+            new YahooMapper.Team("478.l.246889.t.2", "Givaat Shmuel Rabbis", null));
 
     @Mock
     private YahooClient yahoo;

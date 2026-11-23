@@ -36,13 +36,13 @@ class RosterRateLimitFilterTest {
         for (int i = 0; i < 5; i++) {
             assertEquals(200, send("GET", "/api/v1/recommendations/hot", "1.1.1.1").getStatus());
         }
-        assertEquals(200, send("POST", "/api/v1/roster", "1.1.1.1").getStatus());
+        assertEquals(200, send("GET", "/api/v1/leagues/246889/teams", "1.1.1.1").getStatus());
         assertEquals(200, send("POST", "/api/v1/roster/from-yahoo", "1.1.1.1").getStatus());
 
         MockHttpServletResponse limited = send("POST", "/api/v1/roster", "1.1.1.1, 10.0.0.1");
         assertEquals(429, limited.getStatus());
         assertEquals("60", limited.getHeader("Retry-After"));
-        assertTrue(limited.getContentAsString().contains("\"detail\":\"Up to 2 roster checks a minute. Try again in 60 seconds.\""));
+        assertTrue(limited.getContentAsString().contains("\"detail\":\"Up to 2 league or roster checks a minute. Try again in 60 seconds.\""));
 
         assertEquals(200, send("POST", "/api/v1/roster", "2.2.2.2").getStatus());
     }

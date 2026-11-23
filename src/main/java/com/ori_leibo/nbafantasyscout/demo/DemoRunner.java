@@ -1,6 +1,7 @@
 package com.ori_leibo.nbafantasyscout.demo;
 
 import com.ori_leibo.nbafantasyscout.client.NbaDataClient;
+import com.ori_leibo.nbafantasyscout.client.YahooMapper;
 import com.ori_leibo.nbafantasyscout.domain.GameLog;
 import com.ori_leibo.nbafantasyscout.domain.LeagueScoring;
 import com.ori_leibo.nbafantasyscout.domain.Player;
@@ -177,6 +178,11 @@ class DemoRunner implements CommandLineRunner {
             return;
         }
         System.out.println("  " + team.scoring() + ", warnings " + team.warnings());
+        List<YahooMapper.Team> teams = yahoo.teams(YAHOO_LEAGUE);
+        check("the league's teams listed for the picker (" + teams.size() + "), with mine",
+                teams.stream().anyMatch(t -> t.name().equals(YAHOO_TEAM)));
+        check("teams with a logo (" + teams.stream().filter(t -> t.logoUrl() != null).count() + " of " + teams.size()
+                + ")", teams.stream().anyMatch(t -> t.logoUrl() != null));
         check("roster read from Yahoo (" + team.roster().size() + " players)", !team.roster().isEmpty());
         check("free agents read from Yahoo (" + team.freeAgents().size() + ")", !team.freeAgents().isEmpty());
 

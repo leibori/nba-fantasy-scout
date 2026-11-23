@@ -36,14 +36,7 @@ public class YahooLeagueService {
 
     /** Throws {@link IllegalArgumentException} with a message for the user when the league or team doesn't fit. */
     public LeagueTeam read(long leagueId, String teamName) {
-        YahooMapper.League league = yahoo.league(leagueId);
-        int season = GameLog.seasonOf(LocalDate.now(clock));
-        // Yahoo names a season by the year it starts, we by the year it ends
-        if (league.season() != season - 1) {
-            throw new IllegalArgumentException(("Yahoo league %d is from the %d-%d season, not %d-%d; a league id "
-                    + "belongs to one season, use this season's id").formatted(
-                    leagueId, league.season(), league.season() + 1, season - 1, season));
-        }
+        YahooMapper.League league = currentLeague(leagueId);
         List<YahooMapper.Team> teams = yahoo.teams(leagueId);
         YahooMapper.Team team = teams.stream()
                 .filter(candidate -> candidate.name().equalsIgnoreCase(teamName.strip()))
@@ -56,6 +49,24 @@ public class YahooLeagueService {
         Map<String, Set<String>> positions = Stream.concat(roster.stream(), freeAgents.stream())
                 .collect(Collectors.toMap(YahooMapper.NamedPlayer::name, YahooMapper.NamedPlayer::positions, (a, b) -> a));
         return new LeagueTeam(league.scoring(), names(roster), names(freeAgents), positions, league.warnings());
+    }
+
+    /** The league's teams, for the user to pick theirs; the same season check as {@link #read}. */
+    public List<YahooMapper.Team> teams(long leagueId) {
+        currentLeague(leagueId);
+        return yahoo.teams(leagueId);
+    }
+
+    private YahooMapper.League currentLeague(long leagueId) {
+        YahooMapper.League league = yahoo.league(leagueId);
+        int season = GameLog.seasonOf(LocalDate.now(clock));
+        // Yahoo names a season by the year it starts, we by the year it ends
+        if (league.season() != season - 1) {
+            throw new IllegalArgumentException(("Yahoo league %d is from the %d-%d season, not %d-%d; a league id "
+                    + "belongs to one season, use this season's id").formatted(
+                    leagueId, league.season(), league.season() + 1, season - 1, season));
+        }
+        return league;
     }
 
     private static List<String> names(List<YahooMapper.NamedPlayer> players) {
