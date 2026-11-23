@@ -56,8 +56,11 @@ public record ScoutProperties(Espn espn, Sleeper sleeper, Yahoo yahoo, Http http
         }
     }
 
-    /** {@code pickUpNow}: free agents suggested to pick up; {@code streams}: free agents suggested for this week. */
-    public record Roster(int pickUpNow, int streams) {
+    /**
+     * {@code pickUpNow}: free agents suggested to pick up; {@code streams}: free agents suggested for this week;
+     * {@code byCategory}: free agents listed per category.
+     */
+    public record Roster(int pickUpNow, int streams, int byCategory) {
     }
 
     /** {@code rosterPerMinute}: roster checks one visitor may run per minute. */

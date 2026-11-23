@@ -2,6 +2,7 @@ package com.ori_leibo.nbafantasyscout.roster;
 
 import com.ori_leibo.nbafantasyscout.domain.LeagueScoring;
 import com.ori_leibo.nbafantasyscout.domain.Player;
+import com.ori_leibo.nbafantasyscout.domain.StatCategory;
 import com.ori_leibo.nbafantasyscout.recommend.RecommendationService;
 import com.ori_leibo.nbafantasyscout.recommend.TrendService;
 import com.ori_leibo.nbafantasyscout.recommend.TrendService.PlayerForm;
@@ -30,10 +31,11 @@ public class RosterService {
     private final double pointsDropGap;
     private final int pickUpNowSize;
     private final int streamsSize;
+    private final int byCategorySize;
 
     /** The drop gaps are per format: the formats score on different scales. */
     public RosterService(TrendService trends, PlayerMatcher matcher, RosterRules rules, double categoriesDropGap,
-                         double pointsDropGap, int pickUpNowSize, int streamsSize) {
+                         double pointsDropGap, int pickUpNowSize, int streamsSize, int byCategorySize) {
         this.trends = trends;
         this.matcher = matcher;
         this.rules = rules;
@@ -41,6 +43,7 @@ public class RosterService {
         this.pointsDropGap = pointsDropGap;
         this.pickUpNowSize = pickUpNowSize;
         this.streamsSize = streamsSize;
+        this.byCategorySize = byCategorySize;
     }
 
     /** {@code name} as the user typed it; {@code unsure}: the match was weak, so it may be the wrong player. */
@@ -48,11 +51,12 @@ public class RosterService {
     }
 
     /**
-     * {@code streams}: free agents worth the most this week (value x games left); {@code unmatched}: names that
-     * matched no player, and free agents whose match was too weak to suggest.
+     * {@code streams}: free agents worth the most this week (value x games left); {@code byCategory}: the best free
+     * agents in each category, for a user short on one; {@code unmatched}: names that matched no player, and free
+     * agents whose match was too weak to suggest.
      */
     public record RosterAdvice(List<PlayerAdvice> roster, List<PlayerForm> pickUpNow, List<PlayerForm> streams,
-                               List<String> unmatched) {
+                               Map<StatCategory, List<TrendService.CategoryLeader>> byCategory, List<String> unmatched) {
     }
 
     /**
@@ -98,7 +102,9 @@ public class RosterService {
                 })
                 .toList();
         FreeAgents freeAgents = new FreeAgents(freeAgentForms, dropGap);
-        return new RosterAdvice(roster, pickUpNow(freeAgents), streams(freeAgents), List.copyOf(unmatched));
+        // the same pool as every other suggestion: healthy free agents who are playing
+        return new RosterAdvice(roster, pickUpNow(freeAgents), streams(freeAgents),
+                trends.categoryLeaders(freeAgents.available(), byCategorySize), List.copyOf(unmatched));
     }
 
     // weakest first, so the weakest player gets the best free agent; a suggested free agent leaves the pool,

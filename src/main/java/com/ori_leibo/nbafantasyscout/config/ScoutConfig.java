@@ -238,7 +238,8 @@ public class ScoutConfig {
     RosterService rosterService(TrendService trendService, PlayerMatcher playerMatcher, ScoutProperties properties) {
         ScoutProperties.Scoring.PerFormat dropGap = properties.scoring().dropGap();
         return new RosterService(trendService, playerMatcher, new RosterRules(RosterRules.DEFAULT_ORDER),
-                dropGap.categories(), dropGap.points(), properties.roster().pickUpNow(), properties.roster().streams());
+                dropGap.categories(), dropGap.points(), properties.roster().pickUpNow(), properties.roster().streams(),
+                properties.roster().byCategory());
     }
 
     @Bean

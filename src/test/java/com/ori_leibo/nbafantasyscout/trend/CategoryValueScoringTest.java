@@ -3,6 +3,7 @@ package com.ori_leibo.nbafantasyscout.trend;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import com.ori_leibo.nbafantasyscout.domain.StatCategory;
 import com.ori_leibo.nbafantasyscout.domain.StatLine;
 import java.util.List;
 import org.junit.jupiter.api.Test;
@@ -54,6 +55,18 @@ class CategoryValueScoringTest {
 
         // every counting stat equals MID, so the whole value comes from FG% and FT%
         assertEquals(full / 2, half, 1e-9);
+    }
+
+    @Test
+    void oneCategoryAloneIsUnweightedAndFewerTurnoversRankHigher() {
+        CategoryValueScoring halfWeight = new CategoryValueScoring(LEAGUE, 0.5);
+        StatLine sharpShooter = line(8, 10, 2, 4, 4, 6, 4, 1.0, 0.6, 2, 15);
+
+        // the percentage weight shapes the total value, not the ranking within FG% itself
+        assertEquals(scoring.categoryScore(StatCategory.FG_PCT, sharpShooter),
+                halfWeight.categoryScore(StatCategory.FG_PCT, sharpShooter), 1e-9);
+        assertTrue(scoring.categoryScore(StatCategory.TO, LOW) > scoring.categoryScore(StatCategory.TO, HIGH));
+        assertEquals(1 / Math.sqrt(2.0 / 3), scoring.categoryScore(StatCategory.TO, LOW), 1e-9);
     }
 
     @Test

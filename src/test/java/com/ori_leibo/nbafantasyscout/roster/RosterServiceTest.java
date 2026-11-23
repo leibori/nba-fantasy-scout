@@ -5,6 +5,7 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.lenient;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.ori_leibo.nbafantasyscout.domain.LeagueScoring;
@@ -51,9 +52,9 @@ class RosterServiceTest {
 
     @BeforeEach
     void setUp() {
-        // drop gap 1.5 in 9-cat, 0.5 in points; suggest 3 pickups
+        // drop gap 1.5 in 9-cat, 0.5 in points; suggest 3 pickups, 3 streams, 10 per category
         service = new RosterService(trends, new PlayerMatcher(0.85), new RosterRules(RosterRules.DEFAULT_ORDER),
-                1.5, 0.5, 3, 3);
+                1.5, 0.5, 3, 3, 10);
         // lenient: the streams test asks for another format
         lenient().when(trends.formOfAllPlayers(POINTS)).thenReturn(
                 List.of(FLAGG, REED, EDEY, WAIVER_GUARD, SECOND_OPTION, HOT_ROOKIE, INJURED_BIG));
@@ -72,6 +73,8 @@ class RosterServiceTest {
         // rising first, then value; the injured free agent is never suggested
         assertEquals(List.of(HOT_ROOKIE, WAIVER_GUARD, SECOND_OPTION), advice.pickUpNow());
         assertTrue(advice.unmatched().isEmpty());
+        // the category lists draw from the same pool: free agents only, never the injured one
+        verify(trends).categoryLeaders(List.of(WAIVER_GUARD, SECOND_OPTION, HOT_ROOKIE), 10);
     }
 
     @Test

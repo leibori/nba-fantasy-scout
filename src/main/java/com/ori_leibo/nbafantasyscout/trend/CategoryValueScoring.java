@@ -40,14 +40,22 @@ public class CategoryValueScoring implements ValueScoring {
     public double score(StatLine line) {
         double value = 0;
         for (StatCategory category : StatCategory.values()) {
-            double[] stats = meanAndStdDev.get(category);
-            // everyone equal in a category: it can't separate players, so it adds nothing (and no NaN)
-            double z = stats[1] == 0 ? 0 : (measures.get(category).applyAsDouble(line) - stats[0]) / stats[1];
-            double signed = category.lowerIsBetter() ? -z : z;
             boolean percentage = category == StatCategory.FG_PCT || category == StatCategory.FT_PCT;
-            value += percentage ? percentageWeight * signed : signed;
+            double z = categoryScore(category, line);
+            value += percentage ? percentageWeight * z : z;
         }
         return value;
+    }
+
+    /**
+     * How much {@code line} helps in one category, in league standard deviations: higher is better, also for
+     * turnovers (fewer is better) and for the percentages (rated by impact, so volume counts).
+     */
+    public double categoryScore(StatCategory category, StatLine line) {
+        double[] stats = meanAndStdDev.get(category);
+        // everyone equal in a category: it can't separate players, so it adds nothing (and no NaN)
+        double z = stats[1] == 0 ? 0 : (measures.get(category).applyAsDouble(line) - stats[0]) / stats[1];
+        return category.lowerIsBetter() ? -z : z;
     }
 
     private static double sum(List<StatLine> league, ToDoubleFunction<StatLine> stat) {

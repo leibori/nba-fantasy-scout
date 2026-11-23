@@ -2,6 +2,7 @@ package com.ori_leibo.nbafantasyscout.recommend;
 
 import com.ori_leibo.nbafantasyscout.domain.LeagueScoring;
 import com.ori_leibo.nbafantasyscout.domain.Player;
+import com.ori_leibo.nbafantasyscout.domain.StatCategory;
 import com.ori_leibo.nbafantasyscout.domain.StatLine;
 import com.ori_leibo.nbafantasyscout.domain.TrendingSnapshot;
 import com.ori_leibo.nbafantasyscout.trend.CategoryValueScoring;
@@ -10,10 +11,14 @@ import com.ori_leibo.nbafantasyscout.trend.PointsValueScoring;
 import com.ori_leibo.nbafantasyscout.trend.Trend;
 import com.ori_leibo.nbafantasyscout.trend.ValueScoring;
 import java.time.LocalDate;
+import java.util.Comparator;
+import java.util.EnumMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.OptionalDouble;
 import java.util.function.Supplier;
+import java.util.stream.Collectors;
 
 /**
  * Every player's form in one league format: the cached {@link SeasonData} plus what depends on the format,
@@ -98,6 +103,48 @@ public class TrendService {
                             thisWeek.map(w -> w.gamesLeft(season.player().team())).orElse(null));
                 })
                 .toList();
+    }
+
+    /**
+     * A player's standing in one category: {@code perGame} his season average (a percentage for FG%/FT%), with
+     * {@code attempts} per game for those two; {@code score} how much he helps there, in league standard deviations.
+     */
+    public record CategoryLeader(PlayerForm form, double perGame, Double attempts, double score) {
+    }
+
+    /**
+     * The best {@code size} of {@code pool} in each category, by this season's per-game line against the league, so a
+     * user short on blocks finds the best shot blocker available. Players without games this season are left out.
+     */
+    public Map<StatCategory, List<CategoryLeader>> categoryLeaders(List<PlayerForm> pool, int size) {
+        SeasonData.Snapshot data = seasonData.load();
+        Map<StatCategory, List<CategoryLeader>> leaders = new EnumMap<>(StatCategory.class);
+        if (data.league().isEmpty()) {
+            return leaders;
+        }
+        CategoryValueScoring scoring = new CategoryValueScoring(data.league(), percentageWeight);
+        Map<Long, StatLine> lineById = data.players().stream()
+                .filter(season -> season.line() != null)
+                .collect(Collectors.toMap(season -> season.player().id(), SeasonData.PlayerSeason::line, (a, b) -> a));
+        for (StatCategory category : StatCategory.values()) {
+            leaders.put(category, pool.stream()
+                    .filter(form -> lineById.containsKey(form.player().id()))
+                    .map(form -> leader(form, lineById.get(form.player().id()), category, scoring))
+                    .sorted(Comparator.comparingDouble(CategoryLeader::score).reversed())
+                    .limit(size)
+                    .toList());
+        }
+        return leaders;
+    }
+
+    private static CategoryLeader leader(PlayerForm form, StatLine line, StatCategory category,
+                                         CategoryValueScoring scoring) {
+        Double attempts = switch (category) {
+            case FG_PCT -> line.fieldGoalsAttempted();
+            case FT_PCT -> line.freeThrowsAttempted();
+            default -> null;
+        };
+        return new CategoryLeader(form, category.valueOf(line), attempts, scoring.categoryScore(category, line));
     }
 
     private ValueScoring valueScoring(LeagueScoring scoring, List<StatLine> league) {

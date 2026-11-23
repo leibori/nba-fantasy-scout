@@ -2,12 +2,14 @@ package com.ori_leibo.nbafantasyscout.recommend;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.ori_leibo.nbafantasyscout.TestcontainersConfiguration;
 import com.ori_leibo.nbafantasyscout.domain.GameLog;
 import com.ori_leibo.nbafantasyscout.domain.LeagueScoring;
 import com.ori_leibo.nbafantasyscout.domain.Player;
 import com.ori_leibo.nbafantasyscout.domain.PointStat;
+import com.ori_leibo.nbafantasyscout.domain.StatCategory;
 import com.ori_leibo.nbafantasyscout.domain.TrendingSnapshot;
 import com.ori_leibo.nbafantasyscout.persistence.GameLogRepository;
 import com.ori_leibo.nbafantasyscout.persistence.GameLogUpsert;
@@ -158,6 +160,28 @@ class TrendServiceTest {
 
     // window 3, 5 baseline games, 15 minutes; hot at 0.15; high value 1 (9-cat) and 1.5 (points); league = 15+ minutes;
     // inactive after missing 3 team games
+    @Test
+    void listsTheBestOfAPoolInEachCategoryFromThisSeasonsLines() {
+        players.saveAllAndFlush(List.of(player(1, "Big Minutes", "LAL", 5), player(2, "Mid Minutes", "BOS", 5),
+                player(3, "Low Minutes", "NY", 5), player(4, "Not Yet Played", "MIA", 5)));
+        upsert.upsert(1, games(2026, 10, 3, 36, 20));   // 9 rebounds a game
+        upsert.upsert(2, games(2026, 10, 3, 24, 20));   // 6
+        upsert.upsert(3, games(2026, 10, 3, 16, 20));   // 4
+        upsert.upsert(4, games(2026, 1, 5, 30, 20));    // last season only
+        TrendService service = service();
+
+        Map<StatCategory, List<TrendService.CategoryLeader>> leaders =
+                service.categoryLeaders(service.formOfAllPlayers(CATEGORIES), 2);
+
+        assertEquals(List.of("Big Minutes", "Mid Minutes"), leaders.get(StatCategory.REB).stream()
+                .map(leader -> leader.form().player().name()).toList());
+        assertEquals(9.0, leaders.get(StatCategory.REB).getFirst().perGame());
+        assertEquals(20.0, leaders.get(StatCategory.FG_PCT).getFirst().attempts());
+        assertNull(leaders.get(StatCategory.REB).getFirst().attempts());
+        // no game this season means no line to rank him by
+        assertTrue(leaders.values().stream().flatMap(List::stream).noneMatch(leader -> leader.form().player().id() == 4));
+    }
+
     private TrendService service() {
         SeasonData seasonData = new SeasonData(players, gameLogs, snapshots, new TrendCalculator(3, 5, 15),
                 new HotStreakScoring(0.4, 0.3, 0.3), CLOCK, 15);

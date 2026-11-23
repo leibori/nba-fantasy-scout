@@ -16,8 +16,10 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import com.ori_leibo.nbafantasyscout.domain.LeagueScoring;
 import com.ori_leibo.nbafantasyscout.domain.Player;
 import com.ori_leibo.nbafantasyscout.domain.PointStat;
+import com.ori_leibo.nbafantasyscout.domain.StatCategory;
 import com.ori_leibo.nbafantasyscout.recommend.CrowdSignal;
 import com.ori_leibo.nbafantasyscout.recommend.RecommendationService;
+import com.ori_leibo.nbafantasyscout.recommend.TrendService;
 import com.ori_leibo.nbafantasyscout.recommend.TrendService.PlayerForm;
 import com.ori_leibo.nbafantasyscout.roster.Recommendation;
 import com.ori_leibo.nbafantasyscout.roster.RosterService;
@@ -63,7 +65,10 @@ class RosterControllerTest {
         when(rosterService.advise(List.of("zach edey"), List.of(), Map.of(), false, POINTS)).thenReturn(new RosterAdvice(
                 List.of(new PlayerAdvice("zach edey", EDEY, false,
                         new Recommendation.Drop(WAIVER_GUARD, "Waiver Guard is worth 1.10 more"))),
-                List.of(WAIVER_GUARD), List.of(), List.of()));
+                List.of(WAIVER_GUARD), List.of(),
+                Map.of(StatCategory.BLK, List.of(new TrendService.CategoryLeader(WAIVER_GUARD, 2.4, null, 1.8)),
+                        StatCategory.FT_PCT, List.of(new TrendService.CategoryLeader(EDEY, 0.85, 6.2, 1.1))),
+                List.of()));
 
         // no freeAgents field: optional, sent to the service as an empty list
         mvc.perform(post("/api/v1/roster").contentType(MediaType.APPLICATION_JSON).content("""
@@ -75,6 +80,10 @@ class RosterControllerTest {
                 .andExpect(jsonPath("$.roster[0].player.name").value("Zach Edey"))
                 .andExpect(jsonPath("$.roster[0].replacement.value").value(0.9))
                 .andExpect(jsonPath("$.pickUpNow[0].name").value("Waiver Guard"))
+                .andExpect(jsonPath("$.byCategory.BLK[0].player.name").value("Waiver Guard"))
+                .andExpect(jsonPath("$.byCategory.BLK[0].perGame").value(2.4))
+                .andExpect(jsonPath("$.byCategory.BLK[0].attempts").isEmpty())
+                .andExpect(jsonPath("$.byCategory.FT_PCT[0].attempts").value(6.2))
                 .andExpect(jsonPath("$.unmatched").isEmpty())
                 .andExpect(jsonPath("$.warnings").isEmpty());
     }
@@ -87,7 +96,7 @@ class RosterControllerTest {
         when(rosterService.advise(List.of("Zach Edey"), List.of("Waiver Guard"), Map.of("Zach Edey", Set.of("C")), true,
                 new LeagueScoring.Categories()))
                 .thenReturn(new RosterAdvice(List.of(new PlayerAdvice("Zach Edey", EDEY, false,
-                        new Recommendation.Keep("Form: GOOD"))), List.of(), List.of(), List.of()));
+                        new Recommendation.Keep("Form: GOOD"))), List.of(), List.of(), Map.of(), List.of()));
 
         mvc.perform(post("/api/v1/roster/from-yahoo").contentType(MediaType.APPLICATION_JSON).content("""
                         {"leagueId": 246889, "teamName": "My Team", "samePosition": true}"""))

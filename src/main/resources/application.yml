@@ -80,6 +80,7 @@ scout:
   roster:
     pick-up-now: 10            # free agents suggested by the roster advice
     streams: 6                 # free agents suggested for this week, by value x games left
+    by-category: 10            # best free agents listed per category (FG%, REB, BLK...)
   limits:
     roster-per-minute: 10      # roster checks per visitor per minute; a Yahoo league check makes ~9 Yahoo calls
   keep-awake:
