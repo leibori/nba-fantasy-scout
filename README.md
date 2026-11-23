@@ -29,6 +29,7 @@
 | Feature | What you get |
 |---|---|
 | **Keep, watch or drop** | Enter a public Yahoo league ID, pick your team from the league's list, and get a verdict on every player you own, each drop paired with the free agent to pick up instead. The league's own format is read from Yahoo: points or 9-cat. No league? Type your roster. |
+| **Short on one stat** | The best free agents in any single category (blocks, threes, FG%, fewest turnovers...), ranked by this season's numbers against the league. |
 | **Who plays this week** | Games left this week for every player, the free agents worth streaming (value times games left), and the teams that play the most and fewest games. |
 | **Who's heating up** | Players rising in their last 3 games against their own baseline, ranked by fantasy value, filterable by position and scoring format. |
 | **Category risers** | The biggest jump per game in one category (points, rebounds, blocks, FG%...), for 9-cat streaming. |

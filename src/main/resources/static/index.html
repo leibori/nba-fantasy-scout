@@ -211,6 +211,8 @@
   .bar-track { height: 6px; background: var(--line); border-radius: 99px; overflow: hidden; }
   .bar-track i { display: block; height: 100%; background: var(--cyan); border-radius: 99px; }
   .row .v { font: 800 21px/1 var(--display); text-align: right; color: var(--keep); }
+  .row .v small { display: block; margin-top: 4px; font: 500 12px/1.2 var(--body); color: var(--muted); }
+  .need { margin-bottom: 14px; }
 
   /* the verdict: stamps, the one loud thing on the page */
   .verdict { justify-self: center; display: inline-block; font: 900 16px/1 var(--display); letter-spacing: .16em; text-transform: uppercase;
@@ -715,6 +717,36 @@
         who(a.replacement, [fixed(a.replacement.value), formBadge(a.replacement.form), gamesChip(a.replacement)])));
   }
 
+  // the best free agents in one category, for a user short on it; switching chips needs no new request
+  const CATEGORY_LABELS = { PTS: 'PTS', REB: 'REB', AST: 'AST', STL: 'STL', BLK: 'BLK', THREES: '3PM', FG_PCT: 'FG%', FT_PCT: 'FT%', TO: 'TO' };
+  function perGameText(category, leader) {
+    if (category === 'FG_PCT' || category === 'FT_PCT') {
+      return [(leader.perGame * 100).toFixed(1) + '%',
+        h('small', null, leader.attempts.toFixed(1) + (category === 'FG_PCT' ? ' FGA' : ' FTA') + ' a game')];
+    }
+    return [leader.perGame.toFixed(1), h('small', null, category === 'TO' ? 'a game, fewer is better' : 'a game')];
+  }
+  function categoryPicker(byCategory) {
+    const keys = Object.keys(CATEGORY_LABELS).filter(k => byCategory && byCategory[k] && byCategory[k].length);
+    if (!keys.length) return null;
+    const board = h('div');
+    const chips = h('div', { class: 'seg need', role: 'group', 'aria-label': 'Category' },
+      keys.map(k => h('button', { type: 'button', 'aria-pressed': 'false', 'data-value': k }, CATEGORY_LABELS[k])));
+    function show(category) {
+      chips.querySelectorAll('button').forEach(b => b.setAttribute('aria-pressed', b.dataset.value === category));
+      const leaders = byCategory[category];
+      const max = Math.max(...leaders.map(l => l.score), 0.0001);
+      board.replaceChildren(h('div', { class: 'board' }, leaders.map((l, i) => h('div', { class: 'row', style: `--i:${i}` },
+        h('div', { class: 'n' }, i + 1),
+        who(l.player, [formBadge(l.player.form), gamesChip(l.player)]),
+        h('div', { class: 'bar-track', title: 'Against the league this season' }, h('i', { style: `width:${Math.max(0, l.score / max) * 100}%` })),
+        h('div', { class: 'v' }, perGameText(category, l))))));
+    }
+    chips.addEventListener('click', event => { const b = event.target.closest('button'); if (b) show(b.dataset.value); });
+    show(keys[0]);
+    return [h('h2', null, 'Need a category?', h('small', null, 'the best free agents in one stat this season')), chips, board];
+  }
+
   teamForm.addEventListener('submit', async event => {
     event.preventDefault();
     const data = new FormData(teamForm);
@@ -763,6 +795,8 @@
       }
       out.push(h('h2', null, 'Waiver wire steals', h('small', null, 'heating up first, then value')));
       out.push(advice.pickUpNow.length ? cards(advice.pickUpNow) : h('div', { class: 'empty' }, 'No free agent stands out right now.'));
+      const needs = categoryPicker(advice.byCategory);
+      if (needs) out.push(...needs);
       teamOut.replaceChildren(...out);
     } catch (e) {
       teamOut.replaceChildren(errorBox(e));
