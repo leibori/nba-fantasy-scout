@@ -28,13 +28,18 @@
 
 | Feature | What you get |
 |---|---|
-| **Keep, watch or drop** | Bring a public Yahoo league (or type your roster) and get a verdict on every player you own, each drop paired with the free agent to pick up instead. The league's own format is read from Yahoo: points or 9-cat. |
+| **Keep, watch or drop** | Enter a public Yahoo league ID, pick your team from the league's list, and get a verdict on every player you own, each drop paired with the free agent to pick up instead. The league's own format is read from Yahoo: points or 9-cat. No league? Type your roster. |
+| **Who plays this week** | Games left this week for every player, the free agents worth streaming (value times games left), and the teams that play the most and fewest games. |
 | **Who's heating up** | Players rising in their last 3 games against their own baseline, ranked by fantasy value, filterable by position and scoring format. |
 | **Category risers** | The biggest jump per game in one category (points, rebounds, blocks, FG%...), for 9-cat streaming. |
 | **What the crowd is doing** | Adds and drops from Sleeper, cross-checked with the stats: a confirmed breakout, hype, an early pickup nobody has noticed, or a panic drop worth holding. |
 
 <p align="center">
   <img src="docs/images/verdict.webp" alt="The verdict for a sample roster: three drops with the free agent to add, one player to watch" width="900">
+</p>
+
+<p align="center">
+  <img src="docs/images/week.webp" alt="Stream this week: the teams with the most and fewest games left, and the best free agents to stream" width="900">
 </p>
 
 <table>
@@ -56,7 +61,8 @@ Two numbers per player, because "better than before" and "good right now" are di
 
 Together they give a form (hot, returning, good, steady, cold), and a chain of rules turns form, value, injuries
 and crowd signals into the verdict. A player is dropped only when a healthy free agent is clearly better, by a
-margin set per format so that noise doesn't trigger swaps.
+margin set per format so that noise doesn't trigger swaps. A player whose team has played 3 games without him
+counts as not playing: his old form no longer counts, and he is never suggested as a pickup.
 
 ## Under the hood
 
@@ -73,7 +79,7 @@ margin set per format so that noise doesn't trigger swaps.
 | **Modern Java** | Sealed interfaces with pattern-matching `switch`, Strategy for scoring, Chain of Responsibility for roster rules, records, no Spring in the domain |
 | **Name matching** | ESPN, Yahoo and Sleeper share no ids: a hand-written normalizer and Levenshtein distance join them, and weak matches are flagged |
 | **Safe to share** | Content Security Policy and other security headers, a per-visitor limit on roster checks, a token on the sync endpoint |
-| **Tested** | 109 tests: JUnit 5, Mockito, `@WebMvcTest`, and Testcontainers against a real PostgreSQL |
+| **Tested** | 120 tests: JUnit 5, Mockito, `@WebMvcTest`, and Testcontainers against a real PostgreSQL, run by GitHub Actions on every push; a daily job checks that ESPN, Sleeper and Yahoo still answer in the same format |
 
 ## API
 
@@ -85,6 +91,7 @@ margin set per format so that noise doesn't trigger swaps.
 | `GET /api/v1/recommendations/hot` | Players heating up; `?position=G\|F\|C`, `?scoring=points\|categories`, `?limit=` |
 | `GET /api/v1/recommendations/{category}` | Biggest risers in one category: `pts`, `reb`, `ast`, `stl`, `blk`, `threes`, `fg_pct`, `ft_pct`, `to` |
 | `GET /api/v1/players/{id}/trend` | One player by ESPN id |
+| `GET /api/v1/schedule/week` | This week's games per team, most games left first |
 | `POST /api/v1/sync/daily` | Starts the daily sync (needs the `X-Sync-Token` header), returns 202 and a job |
 | `GET /api/v1/sync/jobs/{jobId}` | A sync job's status and result |
 
@@ -146,8 +153,8 @@ Thresholds, weights, point values and limits live in `src/main/resources/applica
 **Resilience4j** (rate limiting, retries), **Caffeine**, JUnit 5, Mockito, Testcontainers, springdoc OpenAPI.
 The front end is one HTML page with vanilla JavaScript and no build step.
 
-Runs for free: a Docker image on **Render**, the database on **Neon**, and **GitHub Actions** for the morning sync
-and for keeping the free server awake.
+Runs for free: a Docker image on **Render**, the database on **Neon**, and **GitHub Actions** for the morning sync,
+the tests on every push and a daily check of the data sources. The app pings its own public URL to stay awake.
 
 ## Author
 
