@@ -9,6 +9,7 @@ import com.ori_leibo.nbafantasyscout.domain.PointStat;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Set;
 import java.util.Map;
@@ -28,6 +29,20 @@ class YahooMapperTest {
         assertEquals(new LeagueScoring.Points(Map.of(PointStat.PTS, 1.0, PointStat.REB, 1.2, PointStat.AST, 1.5,
                 PointStat.STL, 3.0, PointStat.BLK, 3.0, PointStat.TO, -1.0)), league.scoring());
         assertTrue(league.warnings().isEmpty());
+        assertEquals(LocalDate.of(2026, 11, 18), league.editDate());
+    }
+
+    @Test
+    void aPlayerOnWaiversCarriesTheDayHeClears() {
+        String page = """
+                {"fantasy_content": {"league": [{}, {"players": {"count": 2,
+                  "0": {"player": [[{"name": {"full": "Paul Reed"}}, {"display_position": "PF,C"}],
+                                   {"ownership": {"waiver_date": "2026-11-25", "ownership_type": "waivers"}}]},
+                  "1": {"player": [[{"name": {"full": "Ace Bailey"}}, {"display_position": "SF"}],
+                                   {"ownership": {"ownership_type": "freeagents"}}]}}}]}}""";
+
+        assertEquals(List.of(new YahooMapper.NamedPlayer("Paul Reed", Set.of("PF", "C"), LocalDate.of(2026, 11, 25)),
+                new YahooMapper.NamedPlayer("Ace Bailey", Set.of("SF"), null)), mapper.players(page));
     }
 
     @Test
@@ -43,7 +58,7 @@ class YahooMapperTest {
         assertEquals(13, roster.size());
         assertTrue(roster.stream().map(YahooMapper.NamedPlayer::name).toList()
                 .containsAll(List.of("Cooper Flagg", "Zach Edey", "P.J. Washington")));
-        assertTrue(roster.contains(new YahooMapper.NamedPlayer("Cooper Flagg", Set.of("SG", "SF", "PF"))));
+        assertTrue(roster.contains(new YahooMapper.NamedPlayer("Cooper Flagg", Set.of("SG", "SF", "PF"), null)));
 
         List<YahooMapper.NamedPlayer> freeAgents = mapper.players(fixture("free-agents.json"));
         assertEquals(25, freeAgents.size());

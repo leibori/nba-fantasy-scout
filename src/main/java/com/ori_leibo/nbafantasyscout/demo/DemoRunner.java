@@ -187,7 +187,7 @@ class DemoRunner implements CommandLineRunner {
         check("free agents read from Yahoo (" + team.freeAgents().size() + ")", !team.freeAgents().isEmpty());
 
         RosterService.RosterAdvice advice = rosterService.advise(team.roster(), team.freeAgents(), team.positions(),
-                false, team.scoring());
+                team.playsFrom(), false, team.scoring());
         advice.roster().forEach(a -> System.out.printf("    %-5s %-26s value %6s  %-10s %s%s%n",
                 switch (a.recommendation()) {
                     case Recommendation.Keep k -> "KEEP";

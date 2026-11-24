@@ -2,6 +2,7 @@ package com.ori_leibo.nbafantasyscout.client;
 
 import com.ori_leibo.nbafantasyscout.domain.LeagueScoring;
 import com.ori_leibo.nbafantasyscout.domain.PointStat;
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.EnumMap;
 import java.util.HashMap;
@@ -30,9 +31,10 @@ public class YahooMapper {
 
     /**
      * {@code season} is Yahoo's: the year the season starts. {@code warnings}: stats the league scores that the
-     * values leave out, so they are approximate.
+     * values leave out, so they are approximate. {@code editDate}: the first day a roster move made now counts (Yahoo's
+     * edit_key: today in a league that allows changes until each game starts), null when Yahoo leaves it out.
      */
-    public record League(String name, int season, LeagueScoring scoring, List<String> warnings) {
+    public record League(String name, int season, LeagueScoring scoring, List<String> warnings, LocalDate editDate) {
     }
 
     /** {@code logoUrl}: the team's picture on Yahoo's image hosts, or null (the page then shows initials). */
@@ -43,8 +45,11 @@ public class YahooMapper {
     private static final List<String> LOGO_HOSTS = List.of(
             "https://s.yimg.com/", "https://yahoofantasysports-res.cloudinary.com/");
 
-    /** {@code positions}: the fantasy positions he can fill, e.g. PG and SG. */
-    public record NamedPlayer(String name, Set<String> positions) {
+    /**
+     * {@code positions}: the fantasy positions he can fill, e.g. PG and SG; {@code waiverDate}: the day he clears
+     * waivers and can play for whoever claims him, null when he isn't on waivers.
+     */
+    public record NamedPlayer(String name, Set<String> positions, LocalDate waiverDate) {
     }
 
     public League league(String settingsJson) {
@@ -92,8 +97,9 @@ public class YahooMapper {
             throw new IllegalArgumentException("Unsupported Yahoo scoring type \"%s\"; use typed names"
                     .formatted(info.path("scoring_type").asString("")));
         }
+        String editKey = info.path("edit_key").asString("");
         return new League(info.path("name").asString(""), Integer.parseInt(info.path("season").asString("0")), scoring,
-                List.copyOf(warnings));
+                List.copyOf(warnings), editKey.isEmpty() ? null : LocalDate.parse(editKey));
     }
 
     public List<Team> teams(String teamsJson) {
@@ -114,8 +120,13 @@ public class YahooMapper {
         for (JsonNode player : list(JsonMapper.shared().readTree(json).findPath("players"), "player")) {
             JsonNode parts = player.path(0);
             String positions = part(parts, "display_position").asString("");
+            // present when the page asked for it (;out=ownership), next to the player's details
+            JsonNode ownership = player.path(1).path("ownership");
+            String waiverDate = ownership.path("ownership_type").asString("").equals("waivers")
+                    ? ownership.path("waiver_date").asString("") : "";
             players.add(new NamedPlayer(part(parts, "name").path("full").asString(""),
-                    positions.isEmpty() ? Set.of() : Set.of(positions.split(","))));
+                    positions.isEmpty() ? Set.of() : Set.of(positions.split(",")),
+                    waiverDate.isEmpty() ? null : LocalDate.parse(waiverDate)));
         }
         return players;
     }

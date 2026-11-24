@@ -12,6 +12,7 @@ import com.ori_leibo.nbafantasyscout.client.YahooMapper;
 import com.ori_leibo.nbafantasyscout.domain.LeagueScoring;
 import java.time.Clock;
 import java.time.Instant;
+import java.time.LocalDate;
 import java.time.ZoneOffset;
 import java.util.List;
 import java.util.Map;
@@ -39,20 +40,23 @@ class YahooLeagueServiceTest {
     }
 
     private static YahooMapper.League league(int yahooSeason) {
-        return new YahooMapper.League("Test", yahooSeason, new LeagueScoring.Categories(), List.of("a warning"));
+        return new YahooMapper.League("Test", yahooSeason, new LeagueScoring.Categories(), List.of("a warning"),
+                LocalDate.of(2026, 11, 1));
     }
 
     @Test
     void readsTheTeamByNameIgnoringCaseAndSpaces() {
         when(yahoo.league(LEAGUE_ID)).thenReturn(league(2026));
         when(yahoo.teams(LEAGUE_ID)).thenReturn(TEAMS);
-        when(yahoo.roster("478.l.246889.t.2")).thenReturn(List.of(new YahooMapper.NamedPlayer("Cooper Flagg", Set.of("SF"))));
-        when(yahoo.freeAgents(LEAGUE_ID)).thenReturn(List.of(new YahooMapper.NamedPlayer("Tari Eason", Set.of("PF"))));
+        when(yahoo.roster("478.l.246889.t.2")).thenReturn(List.of(new YahooMapper.NamedPlayer("Cooper Flagg", Set.of("SF"), null)));
+        when(yahoo.freeAgents(LEAGUE_ID)).thenReturn(List.of(new YahooMapper.NamedPlayer("Tari Eason", Set.of("PF"), LocalDate.of(2026, 11, 3))));
 
         YahooLeagueService.LeagueTeam team = service().read(LEAGUE_ID, "  givaat shmuel RABBIS ");
 
         assertEquals(new YahooLeagueService.LeagueTeam(new LeagueScoring.Categories(), List.of("Cooper Flagg"),
                 List.of("Tari Eason"), Map.of("Cooper Flagg", Set.of("SF"), "Tari Eason", Set.of("PF")),
+                // the user's own player from the league's edit date, the free agent once he clears waivers
+                Map.of("Cooper Flagg", LocalDate.of(2026, 11, 1), "Tari Eason", LocalDate.of(2026, 11, 3)),
                 List.of("a warning")), team);
     }
 

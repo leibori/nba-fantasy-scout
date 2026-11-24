@@ -6,6 +6,7 @@ import com.ori_leibo.nbafantasyscout.domain.GameLog;
 import com.ori_leibo.nbafantasyscout.domain.LeagueScoring;
 import java.time.Clock;
 import java.time.LocalDate;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -27,11 +28,12 @@ public class YahooLeagueService {
     }
 
     /**
-     * {@code positions}: Yahoo's positions per roster and free agent name; {@code warnings}: stats the league scores
-     * that the values leave out.
+     * {@code positions}: Yahoo's positions per roster and free agent name; {@code playsFrom}: per name, the first day
+     * he can play for the user (the league's edit date, or the day a free agent clears waivers); {@code warnings}:
+     * stats the league scores that the values leave out.
      */
     public record LeagueTeam(LeagueScoring scoring, List<String> roster, List<String> freeAgents,
-                             Map<String, Set<String>> positions, List<String> warnings) {
+                             Map<String, Set<String>> positions, Map<String, LocalDate> playsFrom, List<String> warnings) {
     }
 
     /** Throws {@link IllegalArgumentException} with a message for the user when the league or team doesn't fit. */
@@ -48,7 +50,18 @@ public class YahooLeagueService {
         // two players with one name in a league is rare; the first one's positions are kept
         Map<String, Set<String>> positions = Stream.concat(roster.stream(), freeAgents.stream())
                 .collect(Collectors.toMap(YahooMapper.NamedPlayer::name, YahooMapper.NamedPlayer::positions, (a, b) -> a));
-        return new LeagueTeam(league.scoring(), names(roster), names(freeAgents), positions, league.warnings());
+        Map<String, LocalDate> playsFrom = new HashMap<>();
+        if (league.editDate() != null) {
+            roster.forEach(player -> playsFrom.put(player.name(), league.editDate()));
+        }
+        freeAgents.forEach(player -> {
+            LocalDate from = player.waiverDate() != null ? player.waiverDate() : league.editDate();
+            if (from != null) {
+                playsFrom.putIfAbsent(player.name(), from);
+            }
+        });
+        return new LeagueTeam(league.scoring(), names(roster), names(freeAgents), positions, Map.copyOf(playsFrom),
+                league.warnings());
     }
 
     /** The league's teams, for the user to pick theirs; the same season check as {@link #read}. */

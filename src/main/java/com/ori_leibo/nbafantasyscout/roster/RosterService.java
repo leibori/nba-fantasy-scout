@@ -6,6 +6,7 @@ import com.ori_leibo.nbafantasyscout.domain.StatCategory;
 import com.ori_leibo.nbafantasyscout.recommend.RecommendationService;
 import com.ori_leibo.nbafantasyscout.recommend.TrendService;
 import com.ori_leibo.nbafantasyscout.recommend.TrendService.PlayerForm;
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
@@ -65,10 +66,15 @@ public class RosterService {
      * replacement must share a position with the dropped player.
      */
     public RosterAdvice advise(List<String> rosterNames, List<String> freeAgentNames, Map<String, Set<String>> positions,
-                               boolean samePosition, LeagueScoring scoring) {
+                               Map<String, LocalDate> playsFrom, boolean samePosition, LeagueScoring scoring) {
         List<PlayerForm> forms = trends.formOfAllPlayers(scoring);
         Map<Long, PlayerForm> formById = forms.stream().collect(Collectors.toMap(form -> form.player().id(), Function.identity()));
         List<Player> players = forms.stream().map(PlayerForm::player).toList();
+        // a league says from which day each player can play for the user (today, or when he clears waivers);
+        // without one, games left count from tomorrow
+        playsFrom.forEach((name, from) -> matcher.match(name, players).filter(match -> !match.unsure())
+                .ifPresent(match -> formById.computeIfPresent(match.player().id(), (id, form) ->
+                        form.withGamesLeftThisWeek(trends.gamesLeftFrom(form.player().team(), from)))));
         List<String> unmatched = new ArrayList<>();
         Map<Long, Set<String>> positionsById = new HashMap<>();
 

@@ -33,7 +33,7 @@ public class RosterController {
             + "instead, plus free agents worth picking up now; scored in the configured league format")
     @PostMapping
     public RosterResponse advise(@Valid @RequestBody RosterRequest request) {
-        return RosterResponse.from(roster.advise(request.myRoster(), request.freeAgentsOrEmpty(), Map.of(),
+        return RosterResponse.from(roster.advise(request.myRoster(), request.freeAgentsOrEmpty(), Map.of(), Map.of(),
                 request.samePosition(), recommendations.defaultScoring()), List.of());
     }
 
@@ -42,7 +42,7 @@ public class RosterController {
     @PostMapping("/from-yahoo")
     public RosterResponse adviseFromYahoo(@Valid @RequestBody YahooRosterRequest request) {
         YahooLeagueService.LeagueTeam team = yahoo.read(request.leagueId(), request.teamName());
-        return RosterResponse.from(roster.advise(team.roster(), team.freeAgents(), team.positions(),
+        return RosterResponse.from(roster.advise(team.roster(), team.freeAgents(), team.positions(), team.playsFrom(),
                 request.samePosition(), team.scoring()), team.warnings());
     }
 }

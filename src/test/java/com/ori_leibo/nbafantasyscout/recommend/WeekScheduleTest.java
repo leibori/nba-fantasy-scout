@@ -51,6 +51,12 @@ class WeekScheduleTest {
         assertEquals(0, week.gamesLeft("LAL"), "its only game is tonight");
         assertEquals(0, week.gamesLeft("MIA"), "no game this week");
         assertEquals(0, week.gamesLeft(null));
+        // from a given day (a same-day free agent in an intraday league): tonight's unstarted game counts,
+        // Monday's started one never does
+        assertEquals(1, week.gamesLeft("LAL", LocalDate.of(2026, 11, 25)));
+        assertEquals(2, week.gamesLeft("BOS", LocalDate.of(2026, 11, 25)));
+        assertEquals(1, week.gamesLeft("NY", LocalDate.of(2026, 11, 23)));
+        assertEquals(0, week.gamesLeft("LAL", LocalDate.of(2026, 11, 26)));
         verify(nba, times(7)).fetchSchedule(any());
 
         clock.advance(Duration.ofMinutes(59));

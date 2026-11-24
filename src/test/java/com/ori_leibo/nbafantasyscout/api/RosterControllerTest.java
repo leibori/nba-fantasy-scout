@@ -62,7 +62,7 @@ class RosterControllerTest {
     @Test
     void returnsAdvicePerNameWithTheReplacementOnADrop() throws Exception {
         when(recommendations.defaultScoring()).thenReturn(POINTS);
-        when(rosterService.advise(List.of("zach edey"), List.of(), Map.of(), false, POINTS)).thenReturn(new RosterAdvice(
+        when(rosterService.advise(List.of("zach edey"), List.of(), Map.of(), Map.of(), false, POINTS)).thenReturn(new RosterAdvice(
                 List.of(new PlayerAdvice("zach edey", EDEY, false,
                         new Recommendation.Drop(WAIVER_GUARD, "Waiver Guard is worth 1.10 more"))),
                 List.of(WAIVER_GUARD), List.of(),
@@ -91,9 +91,9 @@ class RosterControllerTest {
     @Test
     void aYahooTeamIsAdvisedInItsLeaguesFormatWithItsWarnings() throws Exception {
         when(yahoo.read(246889, "My Team")).thenReturn(new YahooLeagueService.LeagueTeam(new LeagueScoring.Categories(),
-                List.of("Zach Edey"), List.of("Waiver Guard"), Map.of("Zach Edey", Set.of("C")),
+                List.of("Zach Edey"), List.of("Waiver Guard"), Map.of("Zach Edey", Set.of("C")), Map.of(),
                 List.of("The league scores DD, which is not counted")));
-        when(rosterService.advise(List.of("Zach Edey"), List.of("Waiver Guard"), Map.of("Zach Edey", Set.of("C")), true,
+        when(rosterService.advise(List.of("Zach Edey"), List.of("Waiver Guard"), Map.of("Zach Edey", Set.of("C")), Map.of(), true,
                 new LeagueScoring.Categories()))
                 .thenReturn(new RosterAdvice(List.of(new PlayerAdvice("Zach Edey", EDEY, false,
                         new Recommendation.Keep("Form: GOOD"))), List.of(), List.of(), Map.of(), List.of()));
@@ -119,7 +119,7 @@ class RosterControllerTest {
                         {"teamName": "My Team"}"""))
                 .andExpect(status().isBadRequest());
 
-        verify(rosterService, never()).advise(anyList(), anyList(), anyMap(), anyBoolean(), any());
+        verify(rosterService, never()).advise(anyList(), anyList(), anyMap(), anyMap(), anyBoolean(), any());
         verify(yahoo, never()).read(anyLong(), anyString());
     }
 }

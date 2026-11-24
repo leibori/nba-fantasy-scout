@@ -9,7 +9,9 @@ import java.time.Instant;
 import java.time.LocalDate;
 import java.time.ZoneId;
 import java.time.temporal.TemporalAdjusters;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import org.slf4j.Logger;
@@ -39,17 +41,29 @@ public class WeekSchedule {
     public record TeamWeek(int games, int left) {
     }
 
-    /** {@code from}: tomorrow, the first day counted as left. */
-    public record Week(LocalDate start, LocalDate end, LocalDate from, Map<String, TeamWeek> teams, Instant readAt) {
+    /** {@code from}: tomorrow, the first day counted as left; {@code openGames}: per team, days of games not started. */
+    public record Week(LocalDate start, LocalDate end, LocalDate from, Map<String, TeamWeek> teams,
+                       Map<String, List<LocalDate>> openGames, Instant readAt) {
 
         public Week {
             teams = Map.copyOf(teams);
+            openGames = Map.copyOf(openGames);
         }
 
         /** 0 for a team without a game left this week, or without a team. */
         public int gamesLeft(String team) {
             TeamWeek week = team == null ? null : teams.get(team);
             return week == null ? 0 : week.left();
+        }
+
+        /**
+         * Games not started yet on or after {@code from}, for a player who can play from that day (a Yahoo free agent
+         * from the league's edit date, a waiver claim from his waiver date).
+         */
+        // shortcut: on a Sunday the week is already next week, so a same-day pickup's Sunday game isn't counted
+        public int gamesLeft(String team, LocalDate from) {
+            List<LocalDate> days = team == null ? null : openGames.get(team);
+            return days == null ? 0 : (int) days.stream().filter(day -> !day.isBefore(from)).count();
         }
     }
 
@@ -75,6 +89,7 @@ public class WeekSchedule {
         LocalDate monday = tomorrow.with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY));
         LocalDate sunday = monday.plusDays(6);
         Map<String, int[]> counts = new HashMap<>();
+        Map<String, List<LocalDate>> openGames = new HashMap<>();
         // the whole week, so a team whose games are all played still shows, with none left
         for (LocalDate day = monday; !day.isAfter(sunday); day = day.plusDays(1)) {
             boolean pickupCanPlay = !day.isBefore(tomorrow);
@@ -85,12 +100,15 @@ public class WeekSchedule {
                     if (pickupCanPlay && !game.started()) {
                         count[1]++;
                     }
+                    if (!game.started()) {
+                        openGames.computeIfAbsent(team, key -> new ArrayList<>()).add(day);
+                    }
                 }
             }
         }
         Map<String, TeamWeek> teams = new HashMap<>();
         counts.forEach((team, count) -> teams.put(team, new TeamWeek(count[0], count[1])));
         log.info("Read the schedule for {} to {}: {} teams", monday, sunday, teams.size());
-        return new Week(monday, sunday, tomorrow, teams, now);
+        return new Week(monday, sunday, tomorrow, teams, openGames, now);
     }
 }

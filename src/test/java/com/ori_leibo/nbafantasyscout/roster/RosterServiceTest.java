@@ -21,6 +21,7 @@ import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.stream.Collectors;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -62,7 +63,7 @@ class RosterServiceTest {
 
     @Test
     void withoutAFreeAgentListEveryOtherPlayerIsAvailableAndEachReplacementIsSuggestedOnce() {
-        RosterAdvice advice = service.advise(List.of("cooper flagg", "Paul Reed", "Zach Edey"), List.of(), Map.of(), false, POINTS);
+        RosterAdvice advice = service.advise(List.of("cooper flagg", "Paul Reed", "Zach Edey"), List.of(), Map.of(), Map.of(), false, POINTS);
 
         // input order kept; the weakest (Edey) gets the best free agent, Reed the next one
         assertEquals(List.of("cooper flagg", "Paul Reed", "Zach Edey"), advice.roster().stream().map(PlayerAdvice::name).toList());
@@ -80,7 +81,7 @@ class RosterServiceTest {
     @Test
     void onlyTheGivenFreeAgentsCountAndWeakMatchesAreFlaggedOrLeftOut() {
         RosterAdvice advice = service.advise(List.of("Zak Edy", "Paul Reed", " "),
-                List.of("Hot Rookie", "Nobody At All"), Map.of(), false, POINTS);
+                List.of("Hot Rookie", "Nobody At All"), Map.of(), Map.of(), false, POINTS);
 
         // a weak roster match is still the user's player, so it is kept and flagged
         PlayerAdvice edey = advice.roster().get(0);
@@ -97,6 +98,20 @@ class RosterServiceTest {
     }
 
     @Test
+    void aLeagueSaysFromWhichDayEachFreeAgentCanPlay() {
+        LocalDate today = LocalDate.of(2026, 11, 24);
+        LocalDate clearsWaivers = LocalDate.of(2026, 11, 25);
+        when(trends.gamesLeftFrom("LAL", today)).thenReturn(3);           // tonight's game counts
+        when(trends.gamesLeftFrom("LAL", clearsWaivers)).thenReturn(2);   // a waiver claim misses it
+
+        RosterAdvice advice = service.advise(List.of("Paul Reed"), List.of("Waiver Guard", "Second Option"), Map.of(),
+                Map.of("Waiver Guard", today, "Second Option", clearsWaivers), false, POINTS);
+
+        assertEquals(Map.of("Waiver Guard", 3, "Second Option", 2), advice.pickUpNow().stream()
+                .collect(Collectors.toMap(form -> form.player().name(), PlayerForm::gamesLeftThisWeek)));
+    }
+
+    @Test
     void streamsRankFreeAgentsByValueTimesGamesLeftThisWeek() {
         LeagueScoring categories = new LeagueScoring.Categories();
         PlayerForm fourGames = thisWeek(11, "Four Games", 0.5, 4);          // 2.0
@@ -105,7 +120,7 @@ class RosterServiceTest {
         PlayerForm belowAverage = thisWeek(14, "Below Average", -0.3, 4);   // no stream at any number of games
         when(trends.formOfAllPlayers(categories)).thenReturn(List.of(FLAGG, fourGames, twoGames, doneForTheWeek, belowAverage));
 
-        RosterAdvice advice = service.advise(List.of("Cooper Flagg"), List.of(), Map.of(), false, categories);
+        RosterAdvice advice = service.advise(List.of("Cooper Flagg"), List.of(), Map.of(), Map.of(), false, categories);
 
         assertEquals(List.of(fourGames, twoGames), advice.streams());
     }
@@ -121,9 +136,9 @@ class RosterServiceTest {
                 "Waiver Guard", Set.of("PG", "SG"), "Second Option", Set.of("PF", "C"));
 
         RosterAdvice any = service.advise(List.of("Zach Edey"), List.of("Waiver Guard", "Second Option"), positions,
-                false, POINTS);
+                Map.of(), false, POINTS);
         RosterAdvice same = service.advise(List.of("Zach Edey"), List.of("Waiver Guard", "Second Option"), positions,
-                true, POINTS);
+                Map.of(), true, POINTS);
 
         assertEquals(WAIVER_GUARD, assertInstanceOf(Recommendation.Drop.class, any.roster().get(0).recommendation()).replacement());
         // the guard is worth more, but only the PF/C can fill Edey's C spot

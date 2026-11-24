@@ -55,7 +55,7 @@ public class YahooClient {
         List<YahooMapper.NamedPlayer> players = new ArrayList<>();
         for (int start = 0; start < maxFreeAgents; start += PAGE_SIZE) {
             List<YahooMapper.NamedPlayer> page = mapper.players(http.get(
-                    "%s/league/nba.l.%d/players;status=A;sort=AR;start=%d;count=%d?format=json"
+                    "%s/league/nba.l.%d/players;status=A;sort=AR;start=%d;count=%d;out=ownership?format=json"
                             .formatted(baseUrl, leagueId, start, Math.min(PAGE_SIZE, maxFreeAgents - start))));
             players.addAll(page);
             if (page.size() < PAGE_SIZE) {

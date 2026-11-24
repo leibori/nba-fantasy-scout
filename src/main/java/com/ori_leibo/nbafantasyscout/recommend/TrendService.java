@@ -64,11 +64,22 @@ public class TrendService {
                              FormClassifier.Form form, TrendingSnapshot crowd, CrowdSignal crowdSignal,
                              LocalDate lastGame, int teamGamesMissed, Integer gamesLeftThisWeek) {
 
+        /** The same form with games left counted from another day (a Yahoo league's edit or waiver date). */
+        public PlayerForm withGamesLeftThisWeek(Integer games) {
+            return new PlayerForm(player, gamesThisSeason, trend, hotScore, value, form, crowd, crowdSignal, lastGame,
+                    teamGamesMissed, games);
+        }
+
         /** A player whose last game, missed games and week don't matter to the caller. */
         public PlayerForm(Player player, int gamesThisSeason, Trend trend, Double hotScore, Double value,
                           FormClassifier.Form form, TrendingSnapshot crowd, CrowdSignal crowdSignal) {
             this(player, gamesThisSeason, trend, hotScore, value, form, crowd, crowdSignal, null, 0, null);
         }
+    }
+
+    /** {@code team}'s games this week from {@code from} on that haven't started; null when the schedule can't be read. */
+    public Integer gamesLeftFrom(String team, LocalDate from) {
+        return week.get().map(w -> w.gamesLeft(team, from)).orElse(null);
     }
 
     /** Every player on a roster, in no particular order; recomputed per call, only the season data is cached. */

@@ -28,7 +28,7 @@ class ScheduleControllerTest {
     void listsTeamsByGamesLeftAndSaysSoWhenTheScheduleIsUnavailable() throws Exception {
         when(schedule.thisWeek()).thenReturn(Optional.of(new WeekSchedule.Week(LocalDate.of(2026, 11, 23),
                 LocalDate.of(2026, 11, 29), LocalDate.of(2026, 11, 24), Map.of("NY", new WeekSchedule.TeamWeek(3, 2),
-                "BOS", new WeekSchedule.TeamWeek(4, 4), "MIA", new WeekSchedule.TeamWeek(2, 2)), Instant.EPOCH)));
+                "BOS", new WeekSchedule.TeamWeek(4, 4), "MIA", new WeekSchedule.TeamWeek(2, 2)), Map.of(), Instant.EPOCH)));
 
         mvc.perform(get("/api/v1/schedule/week"))
                 .andExpect(status().isOk())

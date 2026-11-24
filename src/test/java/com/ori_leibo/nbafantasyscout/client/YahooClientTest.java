@@ -30,8 +30,8 @@ class YahooClientTest {
 
         assertEquals(50, new YahooClient(http, BASE, 50, new YahooMapper()).freeAgents(246889).size());
 
-        verify(http).get(BASE + "/league/nba.l.246889/players;status=A;sort=AR;start=0;count=25?format=json");
-        verify(http).get(BASE + "/league/nba.l.246889/players;status=A;sort=AR;start=25;count=25?format=json");
+        verify(http).get(BASE + "/league/nba.l.246889/players;status=A;sort=AR;start=0;count=25;out=ownership?format=json");
+        verify(http).get(BASE + "/league/nba.l.246889/players;status=A;sort=AR;start=25;count=25;out=ownership?format=json");
         verify(http, times(2)).get(anyString());
     }
 
